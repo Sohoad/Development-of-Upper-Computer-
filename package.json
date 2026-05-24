@@ -1,0 +1,50 @@
+{
+  "name": "industrial-hmi",
+  "version": "1.0.0",
+  "description": "Industrial HMI application built with Electron + React + TypeScript + Vite",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"npm run dev:electron\"",
+    "dev:electron": "tsc -p tsconfig.main.json && cross-env NODE_ENV=development electron .",
+    "build": "vite build && tsc -p tsconfig.main.json && electron-builder",
+    "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.hmi.industrial",
+    "productName": "IndustrialHMI",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*"
+    ]
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.5.0",
+    "antd": "^5.22.0",
+    "bcryptjs": "^3.0.3",
+    "echarts": "^6.1.0",
+    "echarts-for-react": "^3.0.6",
+    "i18next": "^26.2.0",
+    "i18next-browser-languagedetector": "^8.2.1",
+    "lowdb": "^7.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^17.0.8",
+    "react-router-dom": "^6.28.0",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node-snap7": "^0.2.24",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.3"
+  }
+}

@@ -1,0 +1,204 @@
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes status-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--color-success);
+  }
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes status-pulse-warning {
+  0% {
+    box-shadow: 0 0 0 0 var(--color-warning);
+  }
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes status-pulse-error {
+  0% {
+    box-shadow: 0 0 0 0 var(--color-error);
+  }
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes value-flash-increase {
+  0% {
+    color: inherit;
+  }
+  30% {
+    color: var(--color-success);
+  }
+  100% {
+    color: inherit;
+  }
+}
+
+@keyframes value-flash-decrease {
+  0% {
+    color: inherit;
+  }
+  30% {
+    color: var(--color-error);
+  }
+  100% {
+    color: inherit;
+  }
+}
+
+@keyframes card-hover-scale {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.01);
+  }
+}
+
+@keyframes button-hover-lift {
+  from {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+  to {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+.page-transition {
+  animation: fade-in var(--duration-page) var(--ease-out) both;
+}
+
+.page-transition.slide-right {
+  animation: slide-in-right var(--duration-page) var(--ease-out) both;
+}
+
+.page-transition.slide-left {
+  animation: slide-in-left var(--duration-page) var(--ease-out) both;
+}
+
+.page-transition.slide-up {
+  animation: slide-in-up var(--duration-page) var(--ease-out) both;
+}
+
+.animated-value {
+  transition: color var(--duration-normal) var(--ease-out);
+}
+
+.animated-value.increase {
+  animation: value-flash-increase 0.8s var(--ease-out);
+}
+
+.animated-value.decrease {
+  animation: value-flash-decrease 0.8s var(--ease-out);
+}
+
+.status-indicator {
+  display: inline-block;
+  border-radius: var(--radius-round);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.status-indicator.connected {
+  background: var(--color-success);
+  animation: status-pulse 2s infinite;
+}
+
+.status-indicator.disconnected {
+  background: var(--color-error);
+  animation: status-pulse-error 2s infinite;
+}
+
+.status-indicator.warning {
+  background: var(--color-warning);
+  animation: status-pulse-warning 2s infinite;
+}
+
+.card-hover {
+  transition: transform var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-hover-lift {
+  transition: transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.btn-hover-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-expand {
+  overflow: hidden;
+  transition: max-height var(--duration-slow) var(--ease-in-out),
+    opacity var(--duration-slow) var(--ease-in-out);
+}
+
+.panel-expand.entering {
+  opacity: 1;
+}
+
+.panel-expand.exiting {
+  opacity: 0;
+}
