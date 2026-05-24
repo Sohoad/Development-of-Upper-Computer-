@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
 import * as crypto from 'crypto';
-import { JSONFileSyncPreset } from 'lowdb/node';
 import type {
   HistoryRecord,
   AlarmRecord,
@@ -90,31 +90,57 @@ function getDBPath(): string {
   return path.join(userDataPath, 'hmi-database.json');
 }
 
+function readDB(): DBSchema {
+  const dbPath = getDBPath();
+  try {
+    const raw = fs.readFileSync(dbPath, 'utf-8');
+    return JSON.parse(raw) as DBSchema;
+  } catch {
+    return { ...DEFAULT_SCHEMA, recipes: [...DEFAULT_SCHEMA.recipes] };
+  }
+}
+
+function writeDB(data: DBSchema): void {
+  const dbPath = getDBPath();
+  const dir = path.dirname(dbPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
+
 class DatabaseService {
-  private db: ReturnType<typeof JSONFileSyncPreset<DBSchema>>;
+  private data: DBSchema;
 
   constructor() {
-    const dbPath = getDBPath();
-    this.db = JSONFileSyncPreset<DBSchema>(dbPath, DEFAULT_SCHEMA);
+    this.data = readDB();
     this.initializeRecipes();
+    this.flush();
+  }
+
+  private flush(): void {
+    writeDB(this.data);
   }
 
   private initializeRecipes(): void {
-    if (this.db.data.recipes.length === 0) {
-      this.db.data.recipes = createSampleRecipes();
-      this.db.write();
+    if (this.data.recipes.length === 0) {
+      this.data.recipes = createSampleRecipes();
     }
   }
 
   insertHistory(records: HistoryRecord[]): void {
     for (const record of records) {
-      this.db.data.history.push(record);
+      this.data.history.push(record);
     }
-    this.db.write();
+    this.flush();
   }
 
   queryHistory(tagNames: string[], startTime: string, endTime: string): HistoryRecord[] {
-    let filtered = this.db.data.history;
+    let filtered = this.data.history;
     if (tagNames.length > 0) {
       filtered = filtered.filter((r) => tagNames.includes(r.tagName));
     }
@@ -124,33 +150,33 @@ class DatabaseService {
     if (endTime) {
       filtered = filtered.filter((r) => r.timestamp <= endTime);
     }
-    return filtered;
+    return deepClone(filtered);
   }
 
   insertAlarm(alarm: AlarmRecord): void {
-    this.db.data.alarms.push(alarm);
-    this.db.write();
+    this.data.alarms.push(alarm);
+    this.flush();
   }
 
   getAlarms(limit?: number): AlarmRecord[] {
-    const alarms = [...this.db.data.alarms];
+    const alarms = [...this.data.alarms];
     if (limit && limit > 0) {
-      return alarms.slice(-limit);
+      return deepClone(alarms.slice(-limit));
     }
-    return alarms;
+    return deepClone(alarms);
   }
 
   acknowledgeAlarm(alarmId: string): void {
-    const alarm = this.db.data.alarms.find((a) => a.id === alarmId);
+    const alarm = this.data.alarms.find((a) => a.id === alarmId);
     if (alarm) {
       alarm.acknowledged = true;
-      this.db.write();
+      this.flush();
     }
   }
 
   insertAuditLog(log: AuditLog): void {
-    this.db.data.auditLogs.push(log);
-    this.db.write();
+    this.data.auditLogs.push(log);
+    this.flush();
   }
 
   queryAuditLogs(filters: {
@@ -159,7 +185,7 @@ class DatabaseService {
     userId?: string;
     action?: string;
   }): AuditLog[] {
-    let filtered = [...this.db.data.auditLogs];
+    let filtered = [...this.data.auditLogs];
     if (filters.startTime) {
       filtered = filtered.filter((l) => l.timestamp >= filters.startTime!);
     }
@@ -172,40 +198,40 @@ class DatabaseService {
     if (filters.action) {
       filtered = filtered.filter((l) => l.action === filters.action);
     }
-    return filtered;
+    return deepClone(filtered);
   }
 
   saveRecipes(recipes: Recipe[]): void {
-    this.db.data.recipes = recipes;
-    this.db.write();
+    this.data.recipes = recipes;
+    this.flush();
   }
 
   getRecipes(): Recipe[] {
-    return this.db.data.recipes;
+    return deepClone(this.data.recipes);
   }
 
   addRecipe(recipe: Recipe): void {
-    this.db.data.recipes.push(recipe);
-    this.db.write();
+    this.data.recipes.push(recipe);
+    this.flush();
   }
 
   updateRecipe(recipeId: string, updates: Partial<Recipe>): void {
-    const index = this.db.data.recipes.findIndex((r) => r.id === recipeId);
+    const index = this.data.recipes.findIndex((r) => r.id === recipeId);
     if (index !== -1) {
-      this.db.data.recipes[index] = {
-        ...this.db.data.recipes[index],
+      this.data.recipes[index] = {
+        ...this.data.recipes[index],
         ...updates,
         updatedAt: new Date().toISOString(),
       };
-      this.db.write();
+      this.flush();
     }
   }
 
   deleteRecipe(recipeId: string): void {
-    const index = this.db.data.recipes.findIndex((r) => r.id === recipeId);
+    const index = this.data.recipes.findIndex((r) => r.id === recipeId);
     if (index !== -1) {
-      this.db.data.recipes.splice(index, 1);
-      this.db.write();
+      this.data.recipes.splice(index, 1);
+      this.flush();
     }
   }
 }

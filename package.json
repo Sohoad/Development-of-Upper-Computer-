@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.19.19",
     "@types/node-snap7": "^0.2.24",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
