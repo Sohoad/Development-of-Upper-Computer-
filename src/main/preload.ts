@@ -80,4 +80,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAdapterStatus: (name: string): Promise<AdapterStatus | null> =>
       ipcRenderer.invoke('protocol:get-adapter-status', name),
   },
+  auth: {
+    login: (username: string, password: string): Promise<{ id: string; username: string; role: 'operator' | 'engineer' | 'admin'; createdAt: string } | { error: string }> =>
+      ipcRenderer.invoke('auth:login', username, password),
+    getUsers: (): Promise<{ id: string; username: string; role: string; createdAt: string }[]> =>
+      ipcRenderer.invoke('auth:get-users'),
+    createUser: (username: string, password: string, role: string): Promise<{ id: string; username: string; role: string; createdAt: string } | { error: string }> =>
+      ipcRenderer.invoke('auth:create-user', username, password, role),
+    deleteUser: (userId: string): Promise<{ success: boolean } | { error: string }> =>
+      ipcRenderer.invoke('auth:delete-user', userId),
+    updateRole: (userId: string, role: string): Promise<{ success: boolean } | { error: string }> =>
+      ipcRenderer.invoke('auth:update-role', userId, role),
+  },
 });

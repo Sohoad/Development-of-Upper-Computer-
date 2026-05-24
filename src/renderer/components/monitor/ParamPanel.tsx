@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import useBreakpoint from 'antd/es/grid/hooks/useBreakpoint';
 import { usePLCStore } from '../../stores/plcStore';
 import { AnimatedValue } from '../common';
 import {
@@ -12,91 +13,56 @@ import {
   SettingOutlined,
   ExperimentOutlined,
 } from '@ant-design/icons';
+import type { TagMapping } from '@shared/types';
 
 interface ParamDef {
   tagName: string;
   labelKey: string;
   unit: string;
-  fallback: number;
   precision: number;
   icon: React.ReactNode;
 }
 
-const PARAMS: ParamDef[] = [
-  {
-    tagName: 'furnace.temp_zone2',
-    labelKey: 'monitor.temperature',
-    unit: '°C',
-    fallback: 950,
-    precision: 0,
-    icon: <FireOutlined />,
-  },
-  {
-    tagName: 'furnace.pressure',
-    labelKey: 'monitor.pressure',
-    unit: ' Pa',
-    fallback: 3.2,
-    precision: 1,
-    icon: <DashboardOutlined />,
-  },
-  {
-    tagName: 'furnace.power',
-    labelKey: 'monitor.power',
-    unit: ' kW',
-    fallback: 85,
-    precision: 0,
-    icon: <ThunderboltOutlined />,
-  },
-  {
-    tagName: 'furnace.current',
-    labelKey: 'monitor.current',
-    unit: ' A',
-    fallback: 128,
-    precision: 1,
-    icon: <LineChartOutlined />,
-  },
-  {
-    tagName: 'furnace.voltage',
-    labelKey: 'monitor.voltage',
-    unit: ' V',
-    fallback: 380,
-    precision: 0,
-    icon: <BulbOutlined />,
-  },
-  {
-    tagName: 'furnace.flow_rate',
-    labelKey: 'monitor.flowRate',
-    unit: ' L/min',
-    fallback: 12.5,
-    precision: 1,
-    icon: <ToolOutlined />,
-  },
-  {
-    tagName: 'furnace.frequency',
-    labelKey: 'monitor.frequency',
-    unit: ' Hz',
-    fallback: 50,
-    precision: 0,
-    icon: <SettingOutlined />,
-  },
-  {
-    tagName: 'furnace.status_code',
-    labelKey: 'monitor.statusCode',
-    unit: '',
-    fallback: 0,
-    precision: 0,
-    icon: <ExperimentOutlined />,
-  },
+const ICON_MAP: Record<string, React.ReactNode> = {
+  monitorTemperature: <FireOutlined />,
+  monitorPressure: <DashboardOutlined />,
+  monitorPower: <ThunderboltOutlined />,
+  monitorCurrent: <LineChartOutlined />,
+  monitorVoltage: <BulbOutlined />,
+  monitorFlowRate: <ToolOutlined />,
+  monitorFrequency: <SettingOutlined />,
+  monitorStatusCode: <ExperimentOutlined />,
+};
+
+const DEFAULT_MAPPINGS: TagMapping = {
+  monitorTemperature: 'furnace.temp_zone2',
+  monitorPressure: 'furnace.pressure',
+  monitorPower: 'furnace.power',
+  monitorCurrent: 'furnace.current',
+  monitorVoltage: 'furnace.voltage',
+  monitorFlowRate: 'furnace.flow_rate',
+  monitorFrequency: 'furnace.frequency',
+  monitorStatusCode: 'furnace.status_code',
+};
+
+const FIELD_META: { key: keyof TagMapping; labelKey: string; unit: string; precision: number }[] = [
+  { key: 'monitorTemperature', labelKey: 'monitor.temperature', unit: '°C', precision: 0 },
+  { key: 'monitorPressure', labelKey: 'monitor.pressure', unit: ' Pa', precision: 1 },
+  { key: 'monitorPower', labelKey: 'monitor.power', unit: ' kW', precision: 0 },
+  { key: 'monitorCurrent', labelKey: 'monitor.current', unit: ' A', precision: 1 },
+  { key: 'monitorVoltage', labelKey: 'monitor.voltage', unit: ' V', precision: 0 },
+  { key: 'monitorFlowRate', labelKey: 'monitor.flowRate', unit: ' L/min', precision: 1 },
+  { key: 'monitorFrequency', labelKey: 'monitor.frequency', unit: ' Hz', precision: 0 },
+  { key: 'monitorStatusCode', labelKey: 'monitor.statusCode', unit: '', precision: 0 },
 ];
 
 function getNumericTagValue(
   tagValues: Map<string, { value: number | boolean }>,
-  tagName: string,
-  fallback: number
-): number {
+  tagName: string
+): number | undefined {
   const tv = tagValues.get(tagName);
   if (tv && typeof tv.value === 'number') return tv.value;
-  return fallback;
+  return undefined;
 }
 
 function SparkLine({ data }: { data: number[] }) {
@@ -129,25 +95,62 @@ function SparkLine({ data }: { data: number[] }) {
 function ParamPanel() {
   const { t } = useTranslation();
   const tagValues = usePLCStore((s) => s.tagValues);
+  const [tagMappings, setTagMappings] = useState<TagMapping>(DEFAULT_MAPPINGS);
+  const bp = useBreakpoint();
+
+  useEffect(() => {
+    if (window.electronAPI) {
+      window.electronAPI.settings.get().then((settings) => {
+        if (settings.tagMappings) {
+          setTagMappings(settings.tagMappings);
+        }
+      }).catch(() => {
+        // use defaults
+      });
+    }
+  }, []);
+
+  const params: ParamDef[] = useMemo(
+    () =>
+      FIELD_META.map((field) => {
+        const tagName = tagMappings[field.key] || DEFAULT_MAPPINGS[field.key];
+        return {
+          tagName,
+          labelKey: field.labelKey,
+          unit: field.unit,
+          precision: field.precision,
+          icon: ICON_MAP[field.key] || <SettingOutlined />,
+        };
+      }),
+    [tagMappings]
+  );
 
   const values = useMemo(
     () =>
-      PARAMS.map((p) => ({
-        ...p,
-        value: getNumericTagValue(tagValues, p.tagName, p.fallback),
-      })),
-    [tagValues]
+      params.map((p) => {
+        const raw = getNumericTagValue(tagValues, p.tagName);
+        const fallback = raw ?? 0;
+        return {
+          ...p,
+          value: raw,
+          displayValue: raw !== undefined ? raw : 0,
+          hasData: raw !== undefined,
+        };
+      }),
+    [params, tagValues]
   );
 
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: 'var(--space-md)',
-        width: '100%',
-      }}
-    >
+  const colCount = bp.xs ? 1 : bp.sm ? 2 : bp.md ? 3 : 4;
+
+    return (
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${colCount}, 1fr)`,
+          gap: 'var(--space-md)',
+          width: '100%',
+        }}
+      >
       {values.map((p) => (
         <div
           key={p.tagName}
@@ -175,7 +178,7 @@ function ParamPanel() {
             <span>{t(p.labelKey)}</span>
           </div>
           <AnimatedValue
-            value={p.value}
+            value={p.displayValue}
             precision={p.precision}
             suffix={p.unit}
             style={{
@@ -186,15 +189,15 @@ function ParamPanel() {
           />
           <SparkLine
             data={[
-              p.value * 0.9,
-              p.value * 0.92,
-              p.value * 0.95,
-              p.value * 0.93,
-              p.value * 0.97,
-              p.value * 0.98,
-              p.value * 0.96,
-              p.value * 0.99,
-              p.value,
+              p.displayValue * 0.9,
+              p.displayValue * 0.92,
+              p.displayValue * 0.95,
+              p.displayValue * 0.93,
+              p.displayValue * 0.97,
+              p.displayValue * 0.98,
+              p.displayValue * 0.96,
+              p.displayValue * 0.99,
+              p.displayValue,
             ]}
           />
         </div>

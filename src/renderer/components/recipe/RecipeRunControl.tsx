@@ -118,7 +118,7 @@ function RecipeRunControl() {
 
           <div>
             <Text type="secondary">
-              {t('recipe.status')}: {t(`recipe.status.${selectedRecipe.status}`)}
+              {t('recipe.statusLabel')}: {t(`recipe.status.${selectedRecipe.status}`)}
             </Text>
           </div>
         </Space>

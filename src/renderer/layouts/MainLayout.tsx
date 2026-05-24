@@ -111,7 +111,7 @@ function MainLayout() {
   const headerFontSize = breakpoint === 'lg' ? 18 : breakpoint === 'md' ? 16 : 14;
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ height: '100vh' }}>
       {!isMobile && (
         <Sider
           collapsible

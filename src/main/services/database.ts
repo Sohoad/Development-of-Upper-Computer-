@@ -1,13 +1,21 @@
-import { app } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
+import * as os from 'os';
 import type {
   HistoryRecord,
   AlarmRecord,
   AuditLog,
   Recipe,
 } from '../../shared/types';
+
+const dbFile = path.join(os.tmpdir(), 'hmi-database.json');
+
+function writeDBFile(data: string): void {
+  const tmpFile = dbFile + '.tmp';
+  fs.writeFileSync(tmpFile, data, 'utf-8');
+  fs.renameSync(tmpFile, dbFile);
+}
 
 interface DBSchema {
   history: HistoryRecord[];
@@ -85,15 +93,9 @@ function createSampleRecipes(): Recipe[] {
   return [standardAnnealing, fastQuenching, lowTempTempering];
 }
 
-function getDBPath(): string {
-  const userDataPath = app.getPath('userData');
-  return path.join(userDataPath, 'hmi-database.json');
-}
-
 function readDB(): DBSchema {
-  const dbPath = getDBPath();
   try {
-    const raw = fs.readFileSync(dbPath, 'utf-8');
+    const raw = fs.readFileSync(dbFile, 'utf-8');
     return JSON.parse(raw) as DBSchema;
   } catch {
     return { ...DEFAULT_SCHEMA, recipes: [...DEFAULT_SCHEMA.recipes] };
@@ -101,12 +103,7 @@ function readDB(): DBSchema {
 }
 
 function writeDB(data: DBSchema): void {
-  const dbPath = getDBPath();
-  const dir = path.dirname(dbPath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), 'utf-8');
+  writeDBFile(JSON.stringify(data, null, 2));
 }
 
 function deepClone<T>(obj: T): T {
@@ -118,18 +115,22 @@ class DatabaseService {
 
   constructor() {
     this.data = readDB();
-    this.initializeRecipes();
-    this.flush();
+    const needsWrite = this.initializeRecipes();
+    if (needsWrite) {
+      this.flush();
+    }
   }
 
   private flush(): void {
     writeDB(this.data);
   }
 
-  private initializeRecipes(): void {
+  private initializeRecipes(): boolean {
     if (this.data.recipes.length === 0) {
       this.data.recipes = createSampleRecipes();
+      return true;
     }
+    return false;
   }
 
   insertHistory(records: HistoryRecord[]): void {

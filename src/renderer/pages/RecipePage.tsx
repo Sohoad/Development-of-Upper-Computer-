@@ -41,7 +41,7 @@ function RecipePage() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={10}>
-          <Card className="card-hover" title={t('recipe.recipeList')} size={isMobile ? 'small' : 'small'}>
+          <Card className="card-hover" title={t('recipe.recipeList')} size={isMobile ? 'small' : 'small'} styles={{ body: { padding: isMobile ? 8 : undefined } }}>
             <RecipeList />
             <div style={{ marginTop: 16 }}>
               <RecipeImportExport />
@@ -49,7 +49,7 @@ function RecipePage() {
           </Card>
         </Col>
         <Col xs={24} lg={14}>
-          <Card className="card-hover" title={t('recipe.stepEditor')} size="small">
+          <Card className="card-hover" title={t('recipe.stepEditor')} size="small" styles={{ body: { padding: isMobile ? 8 : undefined, overflowX: 'auto' } }}>
             <RecipeStepEditor />
           </Card>
           <div style={{ marginTop: 16 }}>

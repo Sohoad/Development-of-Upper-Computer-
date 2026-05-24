@@ -4,7 +4,8 @@ import * as http from 'http';
 import { PLCService } from './services/PLCService';
 import { database } from './services/database';
 import { loadConfig, saveConfig } from './services/configStore';
-import { loadSettings, saveSettings, AppSettings } from './services/settingsStore';
+import { loadSettings, saveSettings } from './services/settingsStore';
+import { authenticate, initDefaultAdmin, getAllUsers, createUser, deleteUser, updateUserRole } from './services/authStore';
 import {
   PLCConfig,
   PLCStatus,
@@ -17,6 +18,7 @@ import {
   Recipe,
   AuditLog,
   AdapterStatus,
+  AppSettings,
 } from '../shared/types';
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -69,7 +71,12 @@ function createWindow(): void {
     mainWindow.webContents.openDevTools();
     waitForVite('http://localhost:5173')
       .then(() => {
-        mainWindow?.loadURL('http://localhost:5173');
+        console.log('[Main] Vite ready, loading URL...');
+        mainWindow?.loadURL('http://localhost:5173').then(() => {
+          console.log('[Main] loadURL completed successfully');
+        }).catch((err: Error) => {
+          console.error('[Main] loadURL failed:', err.message);
+        });
       })
       .catch((err) => {
         console.error('Failed to connect to Vite dev server:', err.message);
@@ -247,9 +254,59 @@ function registerIPCHandlers(): void {
     if (!plcService) return null;
     return plcService.getDataBus().getAdapterStatus(name);
   });
+
+  ipcMain.handle('auth:login', async (_event, username: string, password: string) => {
+    try {
+      const user = await authenticate(username, password);
+      if (user) {
+        return { id: user.id, username: user.username, role: user.role, createdAt: user.createdAt };
+      }
+      return { error: '用户名或密码错误' };
+    } catch (err) {
+      console.error('[Auth Login Error]', err);
+      return { error: '登录失败，请检查服务连接' };
+    }
+  });
+
+  ipcMain.handle('auth:get-users', () => {
+    try {
+      return getAllUsers();
+    } catch (err) {
+      console.error('[Auth GetUsers Error]', err);
+      return [];
+    }
+  });
+
+  ipcMain.handle('auth:create-user', async (_event, username: string, password: string, role: string) => {
+    try {
+      const user = await createUser(username, password, role as 'operator' | 'engineer' | 'admin');
+      return user;
+    } catch (err) {
+      return { error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle('auth:delete-user', (_event, userId: string) => {
+    try {
+      deleteUser(userId);
+      return { success: true };
+    } catch (err) {
+      return { error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle('auth:update-role', (_event, userId: string, role: string) => {
+    try {
+      updateUserRole(userId, role as 'operator' | 'engineer' | 'admin');
+      return { success: true };
+    } catch (err) {
+      return { error: (err as Error).message };
+    }
+  });
 }
 
 app.whenReady().then(() => {
+  initDefaultAdmin();
   initPLCService();
   registerIPCHandlers();
   createWindow();

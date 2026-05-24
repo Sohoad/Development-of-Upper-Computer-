@@ -37,6 +37,7 @@ function formatTime(ts: number): string {
 function AlarmBar() {
   const { t } = useTranslation();
   const alarms = usePLCStore((s) => s.alarms);
+  const connectionStatus = usePLCStore((s) => s.connectionStatus);
   const acknowledgeAlarm = usePLCStore((s) => s.acknowledgeAlarm);
 
   const [selectedAlarm, setSelectedAlarm] = useState<AlarmRecord | null>(null);
@@ -57,6 +58,7 @@ function AlarmBar() {
   );
 
   const activeAlarms = alarms.filter((a) => !a.acknowledged);
+  const isConnected = connectionStatus.connected && !connectionStatus.simulation;
 
   return (
     <>
@@ -104,7 +106,24 @@ function AlarmBar() {
             padding: 'var(--space-xs)',
           }}
         >
-          {alarms.length === 0 ? (
+          {!isConnected ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: 'var(--color-text-tertiary)',
+                fontSize: 'var(--font-size-sm)',
+                gap: 8,
+              }}
+            >
+              <CloseCircleOutlined style={{ fontSize: 24, color: '#d32029' }} />
+              <span>PLC 连接失败</span>
+              <span style={{ fontSize: 'var(--font-size-xs)' }}>{t('manual.notConnectedWarning')}</span>
+            </div>
+          ) : alarms.length === 0 ? (
             <div
               style={{
                 display: 'flex',

@@ -1,8 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { app } from 'electron';
+import * as os from 'os';
 import * as bcrypt from 'bcryptjs';
+
+const storeFile = path.join(os.tmpdir(), 'hmi-users.json');
 
 interface UserData {
   id: string;
@@ -16,21 +18,11 @@ interface UserStoreData {
   users: UserData[];
 }
 
-const dataDir = path.join(app.getPath('userData'), 'data');
-const storeFile = path.join(dataDir, 'users.json');
-
-function ensureDataDir(): void {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-}
-
 function loadUsers(): UserStoreData {
-  ensureDataDir();
-  if (!fs.existsSync(storeFile)) {
-    return { users: [] };
-  }
   try {
+    if (!fs.existsSync(storeFile)) {
+      return { users: [] };
+    }
     const raw = fs.readFileSync(storeFile, 'utf-8');
     return JSON.parse(raw);
   } catch {
@@ -39,8 +31,9 @@ function loadUsers(): UserStoreData {
 }
 
 function saveUsers(data: UserStoreData): void {
-  ensureDataDir();
-  fs.writeFileSync(storeFile, JSON.stringify(data, null, 2), 'utf-8');
+  const tmpFile = storeFile + '.tmp';
+  fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
+  fs.renameSync(tmpFile, storeFile);
 }
 
 export function initDefaultAdmin(): void {
@@ -113,11 +106,14 @@ export async function createUser(username: string, password: string, role: 'oper
 
 export function deleteUser(userId: string): void {
   const data = loadUsers();
-  const index = data.users.findIndex((u) => u.id === userId);
-  if (index === -1) {
+  const user = data.users.find((u) => u.id === userId);
+  if (!user) {
     throw new Error('用户不存在');
   }
-  data.users.splice(index, 1);
+  if (user.role === 'admin') {
+    throw new Error('不能删除管理员账号');
+  }
+  data.users = data.users.filter((u) => u.id !== userId);
   saveUsers(data);
 }
 

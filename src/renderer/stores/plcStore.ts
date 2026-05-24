@@ -73,7 +73,11 @@ export const usePLCStore = create<PLCState>((set, get) => ({
   },
 
   addAlarm: (alarm: AlarmRecord) => {
-    set((state) => ({ alarms: [alarm, ...state.alarms] }));
+    set((state) => {
+      const exists = state.alarms.some((a) => a.tag === alarm.tag && a.level === alarm.level && !a.acknowledged);
+      if (exists) return state;
+      return { alarms: [alarm, ...state.alarms] };
+    });
   },
 
   acknowledgeAlarm: (alarmId: string) => {
@@ -98,6 +102,9 @@ export const usePLCStore = create<PLCState>((set, get) => ({
     });
 
     handlers.connectionHandler = window.electronAPI.plc.onConnectionChange((status) => {
+      if (!status.connected) {
+        set({ alarms: [], tagValues: new Map() });
+      }
       set({ connectionStatus: status });
     });
 

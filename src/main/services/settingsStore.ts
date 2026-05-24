@@ -1,14 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
+import { AppSettings, TagMapping, DEFAULT_TAG_MAPPINGS } from '../../shared/types';
 
 const SETTINGS_FILENAME = 'settings.json';
-
-export interface AppSettings {
-  pollInterval: number;
-  historySaveInterval: number;
-  alarmCheckEnabled: boolean;
-}
 
 const defaultSettings: AppSettings = {
   pollInterval: 500,
@@ -31,12 +26,13 @@ export function loadSettings(): AppSettings {
         pollInterval: parsed.pollInterval ?? defaultSettings.pollInterval,
         historySaveInterval: parsed.historySaveInterval ?? defaultSettings.historySaveInterval,
         alarmCheckEnabled: parsed.alarmCheckEnabled ?? defaultSettings.alarmCheckEnabled,
+        tagMappings: parsed.tagMappings ? { ...DEFAULT_TAG_MAPPINGS, ...parsed.tagMappings } : { ...DEFAULT_TAG_MAPPINGS },
       };
     }
   } catch (err) {
     console.error('Failed to load settings:', err);
   }
-  return { ...defaultSettings };
+  return { ...defaultSettings, tagMappings: { ...DEFAULT_TAG_MAPPINGS } };
 }
 
 export function saveSettings(settings: AppSettings): void {

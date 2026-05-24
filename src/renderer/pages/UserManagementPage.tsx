@@ -10,9 +10,11 @@ import {
   Popconfirm,
   Space,
   message,
+  Tag,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { UserRole } from '@shared/types';
+import { useAuthStore } from '../stores/authStore';
 
 const { Title } = Typography;
 
@@ -40,6 +42,7 @@ function UserManagementPage() {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [form] = Form.useForm();
+  const currentUser = useAuthStore((s) => s.currentUser);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -114,19 +117,23 @@ function UserManagementPage() {
       title: '角色',
       dataIndex: 'role',
       key: 'role',
-      render: (role: string, record: UserRecord) => (
-        <Select
-          value={role}
-          size="small"
-          style={{ width: 100 }}
-          onChange={(value) => handleRoleChange(record.id, value)}
-          options={[
-            { label: '操作员', value: 'operator' },
-            { label: '工程师', value: 'engineer' },
-            { label: '管理员', value: 'admin' },
-          ]}
-        />
-      ),
+      render: (role: string, record: UserRecord) => {
+        const isAdmin = role === 'admin';
+        return (
+          <Select
+            value={role}
+            size="small"
+            style={{ width: 100 }}
+            disabled={isAdmin}
+            onChange={(value) => handleRoleChange(record.id, value)}
+            options={[
+              { label: '操作员', value: 'operator' },
+              { label: '工程师', value: 'engineer' },
+              { label: '管理员', value: 'admin' },
+            ]}
+          />
+        );
+      },
     },
     {
       title: '创建时间',
@@ -137,18 +144,31 @@ function UserManagementPage() {
     {
       title: '操作',
       key: 'action',
-      render: (_: unknown, record: UserRecord) => (
-        <Popconfirm
-          title="确定要删除此用户吗？"
-          onConfirm={() => handleDeleteUser(record.id)}
-          okText="确定"
-          cancelText="取消"
-        >
-          <Button type="link" danger size="small" icon={<DeleteOutlined />}>
-            删除
-          </Button>
-        </Popconfirm>
-      ),
+      render: (_: unknown, record: UserRecord) => {
+        const isAdmin = record.role === 'admin';
+        const isSelf = record.id === currentUser?.id;
+        const deleteTooltip = isAdmin ? '不能删除管理员账号' : isSelf ? '不能删除自己' : undefined;
+        return (
+          <Popconfirm
+            title="确定要删除此用户吗？"
+            onConfirm={() => handleDeleteUser(record.id)}
+            okText="确定"
+            cancelText="取消"
+            disabled={isAdmin || isSelf}
+          >
+            <Button
+              type="link"
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              disabled={isAdmin || isSelf}
+              title={deleteTooltip}
+            >
+              删除
+            </Button>
+          </Popconfirm>
+        );
+      },
     },
   ];
 

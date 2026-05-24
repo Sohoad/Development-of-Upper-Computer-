@@ -26,20 +26,7 @@ function RecipeStepEditor() {
     setSteps((prev) =>
       prev.map((step) => {
         if (step.stepNo !== stepNo) return step;
-
-        const updated = { ...step, [field]: value };
-
-        if (field === 'controlMode') {
-          if (value === 'temperature') {
-            delete updated.powerSet;
-            delete updated.pressureSet;
-            delete updated.pressureUnit;
-          } else {
-            delete updated.setTemp;
-          }
-        }
-
-        return updated;
+        return { ...step, [field]: value };
       })
     );
   };
@@ -54,6 +41,9 @@ function RecipeStepEditor() {
         timeUnit: 'second',
         controlMode: 'temperature',
         setTemp: 0,
+        powerSet: 0,
+        pressureSet: 0,
+        pressureUnit: 'Pa',
       },
     ]);
   };
@@ -70,64 +60,20 @@ function RecipeStepEditor() {
     });
   };
 
-  const controlModeColumn = (step: RecipeStep) => {
-    if (step.controlMode === 'temperature') {
-      return (
-        <InputNumber
-          size="small"
-          min={0}
-          value={step.setTemp ?? 0}
-          onChange={(val) => updateStep(step.stepNo, 'setTemp', val ?? 0)}
-          addonAfter="℃"
-          style={{ width: '100%' }}
-        />
-      );
-    }
-    return (
-      <Space size={4}>
-        <InputNumber
-          size="small"
-          min={0}
-          max={100}
-          value={step.powerSet ?? 0}
-          onChange={(val) => updateStep(step.stepNo, 'powerSet', val ?? 0)}
-          addonAfter="%"
-          style={{ width: 100 }}
-        />
-        <InputNumber
-          size="small"
-          min={0}
-          value={step.pressureSet ?? 0}
-          onChange={(val) => updateStep(step.stepNo, 'pressureSet', val ?? 0)}
-          style={{ width: 100 }}
-        />
-        <Select
-          size="small"
-          value={step.pressureUnit ?? 'Pa'}
-          onChange={(val) => updateStep(step.stepNo, 'pressureUnit', val)}
-          style={{ width: 80 }}
-          options={[
-            { value: 'Pa', label: 'Pa' },
-            { value: 'mBar', label: 'mBar' },
-          ]}
-        />
-      </Space>
-    );
-  };
-
   const columns: ColumnsType<RecipeStep> = [
     {
       title: '#',
       dataIndex: 'stepNo',
       key: 'stepNo',
       width: 50,
+      fixed: 'left',
       render: (_: unknown, __: RecipeStep, index: number) => index + 1,
     },
     {
       title: t('recipe.runTime'),
       dataIndex: 'runTime',
       key: 'runTime',
-      width: 130,
+      width: 120,
       render: (_: unknown, record: RecipeStep) => (
         <InputNumber
           size="small"
@@ -142,7 +88,7 @@ function RecipeStepEditor() {
       title: t('recipe.timeUnit'),
       dataIndex: 'timeUnit',
       key: 'timeUnit',
-      width: 110,
+      width: 100,
       render: (_: unknown, record: RecipeStep) => (
         <Select
           size="small"
@@ -160,7 +106,7 @@ function RecipeStepEditor() {
       title: t('recipe.controlMode'),
       dataIndex: 'controlMode',
       key: 'controlMode',
-      width: 130,
+      width: 110,
       render: (_: unknown, record: RecipeStep) => (
         <Select
           size="small"
@@ -176,13 +122,70 @@ function RecipeStepEditor() {
     },
     {
       title: t('recipe.setTemp'),
-      key: 'tempOrPower',
-      render: (_: unknown, record: RecipeStep) => controlModeColumn(record),
+      dataIndex: 'setTemp',
+      key: 'setTemp',
+      width: 100,
+      render: (_: unknown, record: RecipeStep) => (
+        <InputNumber
+          size="small"
+          min={0}
+          value={record.controlMode === 'temperature' ? record.setTemp ?? 0 : 0}
+          onChange={(val) => updateStep(record.stepNo, 'setTemp', val ?? 0)}
+          addonAfter="℃"
+          style={{ width: '100%' }}
+          disabled={record.controlMode !== 'temperature'}
+        />
+      ),
+    },
+    {
+      title: t('recipe.powerSet'),
+      dataIndex: 'powerSet',
+      key: 'powerSet',
+      width: 100,
+      render: (_: unknown, record: RecipeStep) => (
+        <InputNumber
+          size="small"
+          min={0}
+          max={100}
+          value={record.controlMode === 'power' ? record.powerSet ?? 0 : 0}
+          onChange={(val) => updateStep(record.stepNo, 'powerSet', val ?? 0)}
+          addonAfter="%"
+          style={{ width: '100%' }}
+          disabled={record.controlMode !== 'power'}
+        />
+      ),
+    },
+    {
+      title: t('recipe.pressureSet'),
+      key: 'pressureSet',
+      width: 180,
+      render: (_: unknown, record: RecipeStep) => (
+        <Space size={4}>
+          <InputNumber
+            size="small"
+            min={0}
+            value={record.pressureSet ?? 0}
+            onChange={(val) => updateStep(record.stepNo, 'pressureSet', val ?? 0)}
+            style={{ width: 80 }}
+          />
+          <Select
+            size="small"
+            value={record.pressureUnit ?? 'Pa'}
+            onChange={(val) => updateStep(record.stepNo, 'pressureUnit', val)}
+            style={{ width: 70 }}
+            options={[
+              { value: 'Pa', label: 'Pa' },
+              { value: 'mBar', label: 'mBar' },
+            ]}
+          />
+        </Space>
+      ),
     },
     {
       title: t('recipe.action'),
       key: 'action',
       width: 60,
+      fixed: 'right',
       render: (_: unknown, record: RecipeStep) => (
         <Button
           type="link"
@@ -232,14 +235,16 @@ function RecipeStepEditor() {
           </Button>
         </Space>
       </div>
-      <Table<RecipeStep>
-        columns={columns}
-        dataSource={steps.map((s, idx) => ({ ...s, key: s.stepNo || idx }))}
-        rowKey="stepNo"
-        size="small"
-        pagination={false}
-        scroll={{ y: 300 }}
-      />
+      <div style={{ overflowX: 'auto' }}>
+        <Table<RecipeStep>
+          columns={columns}
+          dataSource={steps.map((s, idx) => ({ ...s, key: s.stepNo || idx }))}
+          rowKey="stepNo"
+          size="small"
+          pagination={false}
+          scroll={{ x: 820, y: 300 }}
+        />
+      </div>
     </div>
   );
 }

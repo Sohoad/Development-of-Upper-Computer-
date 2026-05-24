@@ -191,7 +191,30 @@ export interface AppSettings {
   pollInterval: number;
   historySaveInterval: number;
   alarmCheckEnabled: boolean;
+  tagMappings?: TagMapping;
 }
+
+export interface TagMapping {
+  monitorTemperature: string;
+  monitorPressure: string;
+  monitorPower: string;
+  monitorCurrent: string;
+  monitorVoltage: string;
+  monitorFlowRate: string;
+  monitorFrequency: string;
+  monitorStatusCode: string;
+}
+
+export const DEFAULT_TAG_MAPPINGS: TagMapping = {
+  monitorTemperature: 'furnace.temp_zone2',
+  monitorPressure: 'furnace.pressure',
+  monitorPower: 'furnace.power',
+  monitorCurrent: 'furnace.current',
+  monitorVoltage: 'furnace.voltage',
+  monitorFlowRate: 'furnace.flow_rate',
+  monitorFrequency: 'furnace.frequency',
+  monitorStatusCode: 'furnace.status_code',
+};
 
 export interface ElectronAPI {
   getAppInfo: () => Promise<AppInfo>;

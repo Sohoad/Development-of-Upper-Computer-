@@ -54,7 +54,9 @@ export class PLCService extends EventEmitter {
         values: data.tags,
       });
       this.saveHistory(data.tags, data.timestamp);
-      this.checkAlarms(data.tags);
+      if (!this.s7Adapter.isSimulation()) {
+        this.checkAlarms(data.tags);
+      }
     });
 
     this.dataBus.on('error', (err: { adapterName: string; error: Error }) => {
@@ -209,7 +211,11 @@ export class PLCService extends EventEmitter {
       const tag = tv.tag;
       if (tag.min !== undefined && tag.max !== undefined) {
         const value = typeof tv.value === 'number' ? tv.value : 0;
+        const hasExistingAlarm = this.alarmHistory.some(
+          (a) => a.tag === tag.name && !a.acknowledged
+        );
         if (value > tag.max) {
+          if (hasExistingAlarm) continue;
           const alarm: AlarmRecord = {
             id: crypto.randomUUID(),
             time: Date.now(),
@@ -223,6 +229,7 @@ export class PLCService extends EventEmitter {
           database.insertAlarm(alarm);
           this.emit('alarm', { alarm });
         } else if (value < tag.min) {
+          if (hasExistingAlarm) continue;
           const alarm: AlarmRecord = {
             id: crypto.randomUUID(),
             time: Date.now(),

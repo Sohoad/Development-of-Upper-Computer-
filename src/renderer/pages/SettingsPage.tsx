@@ -24,11 +24,15 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   LinkOutlined,
+  NodeIndexOutlined,
+  LockOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { PageTransition } from '../components/common';
 import { usePLCStore } from '../stores/plcStore';
+import { useAuthStore } from '../stores/authStore';
 import { useThemeContext } from '../contexts/ThemeContext';
+import type { TagMapping, TagConfig } from '@shared/types';
 
 const { Title, Text } = Typography;
 
@@ -39,20 +43,39 @@ interface AppInfo {
   electronVersion: string;
 }
 
+const MAPPING_FIELDS: { key: keyof TagMapping; labelKey: string; unit: string }[] = [
+  { key: 'monitorTemperature', labelKey: 'monitor.temperature', unit: '°C' },
+  { key: 'monitorPressure', labelKey: 'monitor.pressure', unit: 'Pa' },
+  { key: 'monitorPower', labelKey: 'monitor.power', unit: 'kW' },
+  { key: 'monitorCurrent', labelKey: 'monitor.current', unit: 'A' },
+  { key: 'monitorVoltage', labelKey: 'monitor.voltage', unit: 'V' },
+  { key: 'monitorFlowRate', labelKey: 'monitor.flowRate', unit: 'L/min' },
+  { key: 'monitorFrequency', labelKey: 'monitor.frequency', unit: 'Hz' },
+  { key: 'monitorStatusCode', labelKey: 'monitor.statusCode', unit: '' },
+];
+
 function SettingsPage() {
   const { t, i18n } = useTranslation();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const connectionStatus = usePLCStore((s) => s.connectionStatus);
   const connect = usePLCStore((s) => s.connect);
   const disconnect = usePLCStore((s) => s.disconnect);
+  const currentUser = useAuthStore((s) => s.currentUser);
   const { themeMode, toggleTheme } = useThemeContext();
 
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [appInfoLoading, setAppInfoLoading] = useState(true);
   const [sysParamsLoading, setSysParamsLoading] = useState(true);
+  const [mappingLoading, setMappingLoading] = useState(true);
 
   const [plcForm] = Form.useForm();
   const [sysForm] = Form.useForm();
+  const [mappingForm] = Form.useForm();
+
+  const [availableTags, setAvailableTags] = useState<TagConfig[]>([]);
+  const [currentMappings, setCurrentMappings] = useState<TagMapping | null>(null);
+
+  const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
     if (window.electronAPI) {
@@ -81,6 +104,39 @@ function SettingsPage() {
       setSysParamsLoading(false);
     }
   }, [sysForm]);
+
+  useEffect(() => {
+    loadMappingData();
+  }, []);
+
+  const loadMappingData = async () => {
+    setMappingLoading(true);
+    try {
+      if (window.electronAPI) {
+        const [settings, tags] = await Promise.all([
+          window.electronAPI.settings.get(),
+          window.electronAPI.plc.getTags().catch(() => [] as TagConfig[]),
+        ]);
+        setAvailableTags(tags);
+        const mappings = settings.tagMappings || {
+          monitorTemperature: 'furnace.temp_zone2',
+          monitorPressure: 'furnace.pressure',
+          monitorPower: 'furnace.power',
+          monitorCurrent: 'furnace.current',
+          monitorVoltage: 'furnace.voltage',
+          monitorFlowRate: 'furnace.flow_rate',
+          monitorFrequency: 'furnace.frequency',
+          monitorStatusCode: 'furnace.status_code',
+        };
+        setCurrentMappings(mappings);
+        mappingForm.setFieldsValue(mappings);
+      }
+    } catch (err) {
+      console.error('[Settings] load mapping error:', err);
+    } finally {
+      setMappingLoading(false);
+    }
+  };
 
   const handleConnect = async () => {
     try {
@@ -114,7 +170,9 @@ function SettingsPage() {
     try {
       const values = await sysForm.validateFields();
       if (window.electronAPI) {
+        const settings = await window.electronAPI.settings.get();
         await window.electronAPI.settings.save({
+          ...settings,
           pollInterval: values.pollInterval,
           historySaveInterval: values.historySaveInterval,
           alarmCheckEnabled: values.alarmCheckEnabled,
@@ -124,6 +182,31 @@ function SettingsPage() {
     } catch {
       // validation error
     }
+  };
+
+  const handleSaveMappings = () => {
+    modal.confirm({
+      title: '确认修改点位映射',
+      content: '修改点位映射将影响状态监视页面的数据显示，确认要保存吗？',
+      okText: '确认保存',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const values = await mappingForm.validateFields();
+          if (window.electronAPI) {
+            const settings = await window.electronAPI.settings.get();
+            await window.electronAPI.settings.save({
+              ...settings,
+              tagMappings: values as TagMapping,
+            });
+            setCurrentMappings(values as TagMapping);
+          }
+          message.success('点位映射已保存');
+        } catch {
+          // validation error
+        }
+      },
+    });
   };
 
   const handleLanguageChange = (value: string) => {
@@ -141,6 +224,11 @@ function SettingsPage() {
         : '未连接'}
     </Tag>
   );
+
+  const tagOptions = availableTags.map((tag) => ({
+    value: tag.name,
+    label: `${tag.name} (${tag.address})`,
+  }));
 
   return (
     <PageTransition direction="slide-right">
@@ -344,6 +432,86 @@ function SettingsPage() {
                         </Space>
                       </Form.Item>
                     </Form>
+                  </Card>
+                </Col>
+              </Row>
+            ),
+          },
+          {
+            key: 'mapping',
+            label: (
+              <span>
+                <NodeIndexOutlined /> 点位映射
+              </span>
+            ),
+            children: (
+              <Row gutter={[24, 24]}>
+                <Col xs={24} md={16} lg={12}>
+                  <Card
+                    title={
+                      <Space>
+                        <NodeIndexOutlined />
+                        <span>监控点位与 PLC 标签映射</span>
+                        {!isAdmin && (
+                          <Tag icon={<LockOutlined />} color="orange">
+                            仅管理员可编辑
+                          </Tag>
+                        )}
+                      </Space>
+                    }
+                    size="small"
+                  >
+                    {!isAdmin && currentMappings ? (
+                      <Descriptions column={1} bordered size="small">
+                        {MAPPING_FIELDS.map((field) => (
+                          <Descriptions.Item key={field.key} label={t(field.labelKey)}>
+                            {currentMappings[field.key]}
+                          </Descriptions.Item>
+                        ))}
+                      </Descriptions>
+                    ) : mappingLoading ? (
+                      <div style={{ textAlign: 'center', padding: 24 }}>
+                        <Spin />
+                      </div>
+                    ) : (
+                      <Form form={mappingForm} layout="vertical">
+                        {MAPPING_FIELDS.map((field) => (
+                          <Form.Item
+                            key={field.key}
+                            name={field.key}
+                            label={
+                              <Space size={4}>
+                                <span>{t(field.labelKey)}</span>
+                                {field.unit && (
+                                  <Text type="secondary" style={{ fontSize: 12 }}>
+                                    ({field.unit})
+                                  </Text>
+                                )}
+                              </Space>
+                            }
+                            rules={[{ required: true, message: '请选择对应点位' }]}
+                          >
+                            <Select
+                              showSearch
+                              placeholder="搜索或选择 PLC 标签"
+                              options={tagOptions}
+                              allowClear
+                              filterOption={(input, option) =>
+                                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                              }
+                            />
+                          </Form.Item>
+                        ))}
+                        <Space>
+                          <Button type="primary" onClick={handleSaveMappings}>
+                            保存映射
+                          </Button>
+                          <Button onClick={() => mappingForm.resetFields()}>
+                            重置
+                          </Button>
+                        </Space>
+                      </Form>
+                    )}
                   </Card>
                 </Col>
               </Row>

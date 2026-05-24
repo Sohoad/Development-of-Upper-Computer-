@@ -51,7 +51,7 @@ function RecipeList({ onEditRecipe }: RecipeListProps) {
       sorter: (a, b) => a.totalSteps - b.totalSteps,
     },
     {
-      title: t('recipe.status'),
+      title: t('recipe.statusLabel'),
       dataIndex: 'status',
       key: 'status',
       render: (status: Recipe['status']) => (
@@ -105,20 +105,23 @@ function RecipeList({ onEditRecipe }: RecipeListProps) {
   ];
 
   return (
-    <Table<Recipe>
-      columns={columns}
-      dataSource={recipes}
-      rowKey="id"
-      size="small"
-      pagination={false}
-      rowClassName={(record) =>
-        record.id === selectedRecipe?.id ? 'ant-table-row-selected' : ''
-      }
-      onRow={(record) => ({
-        onClick: () => selectRecipe(record.id),
-        style: { cursor: 'pointer' },
-      })}
-    />
+    <div style={{ overflowX: 'auto' }}>
+      <Table<Recipe>
+        columns={columns}
+        dataSource={recipes}
+        rowKey="id"
+        size="small"
+        pagination={false}
+        scroll={{ x: 600 }}
+        rowClassName={(record) =>
+          record.id === selectedRecipe?.id ? 'ant-table-row-selected' : ''
+        }
+        onRow={(record) => ({
+          onClick: () => selectRecipe(record.id),
+          style: { cursor: 'pointer' },
+        })}
+      />
+    </div>
   );
 }
 
