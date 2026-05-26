@@ -58,7 +58,7 @@ function AlarmBar() {
   );
 
   const activeAlarms = alarms.filter((a) => !a.acknowledged);
-  const isConnected = connectionStatus.connected && !connectionStatus.simulation;
+  const isConnected = connectionStatus.connected;
 
   return (
     <>

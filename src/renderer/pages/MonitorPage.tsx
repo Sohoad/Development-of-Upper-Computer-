@@ -1,15 +1,12 @@
 import { useEffect } from 'react';
-import { Typography, Tag } from 'antd';
+import { Tag } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { PageTransition, StatusIndicator } from '../components/common';
 import { usePLCStore } from '../stores/plcStore';
 import FurnaceVisualization from '../components/monitor/FurnaceVisualization';
 import ParamPanel from '../components/monitor/ParamPanel';
-import GaugePanel from '../components/monitor/GaugePanel';
 import AlarmBar from '../components/monitor/AlarmBar';
 import RealTimeCurve from '../components/monitor/RealTimeCurve';
-
-const { Title } = Typography;
 
 function MonitorPage() {
   const { t } = useTranslation();
@@ -55,16 +52,12 @@ function MonitorPage() {
           </div>
         </div>
 
-        <div style={{ flexShrink: 0 }}>
-          <ParamPanel />
-        </div>
-
         <div style={{ flex: 1, display: 'flex', gap: 4, minHeight: 0 }}>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
             <FurnaceVisualization />
           </div>
-          <div style={{ width: 180, flexShrink: 0, overflow: 'hidden' }}>
-            <GaugePanel />
+          <div style={{ width: 150, flexShrink: 0, overflow: 'hidden' }}>
+            <ParamPanel />
           </div>
         </div>
 
@@ -72,7 +65,7 @@ function MonitorPage() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <RealTimeCurve />
           </div>
-          <div style={{ width: 180, flexShrink: 0 }}>
+          <div style={{ width: 150, flexShrink: 0 }}>
             <AlarmBar />
           </div>
         </div>

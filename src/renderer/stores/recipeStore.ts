@@ -73,6 +73,31 @@ export const useRecipeStore = create<RecipeState>((set, get) => ({
 
   loadRecipes: async () => {
     try {
+      if (!window.electronAPI) {
+        const demoRecipes: Recipe[] = [
+          {
+            id: 'demo-1', name: '标准退火工艺', number: 1, totalSteps: 4, status: 'ready',
+            steps: [
+              { stepNo: 1, name: '升温', description: '以 5°C/min 升温至 800°C', targetTemp: 800, holdTime: 30, rampRate: 5, pressure: 1.0, gasValves: [] },
+              { stepNo: 2, name: '保温', description: '800°C 恒温', targetTemp: 800, holdTime: 120, rampRate: 0, pressure: 0.5, gasValves: [] },
+              { stepNo: 3, name: '降温', description: '自然冷却至 200°C', targetTemp: 200, holdTime: 0, rampRate: 0, pressure: 0.0, gasValves: [] },
+              { stepNo: 4, name: '出炉', description: '冷却至室温', targetTemp: 25, holdTime: 0, rampRate: 0, pressure: 0.0, gasValves: [] },
+            ],
+            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'demo-2', name: '高温烧结工艺', number: 2, totalSteps: 3, status: 'ready',
+            steps: [
+              { stepNo: 1, name: '预热', description: '以 3°C/min 升温至 400°C', targetTemp: 400, holdTime: 20, rampRate: 3, pressure: 1.0, gasValves: [] },
+              { stepNo: 2, name: '高温烧结', description: '1100°C 高温烧结', targetTemp: 1100, holdTime: 180, rampRate: 8, pressure: 0.3, gasValves: [] },
+              { stepNo: 3, name: '缓冷', description: '控制降温至 100°C', targetTemp: 100, holdTime: 0, rampRate: 0, pressure: 0.0, gasValves: [] },
+            ],
+            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+          },
+        ];
+        set({ recipes: demoRecipes });
+        return;
+      }
       const recipes = await window.electronAPI.recipe.getAll();
       set({ recipes });
     } catch (err) {

@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import useBreakpoint from 'antd/es/grid/hooks/useBreakpoint';
 import { usePLCStore } from '../../stores/plcStore';
 import AnimatedValue from '../common/AnimatedValue';
 import {
@@ -21,17 +20,19 @@ interface ParamDef {
   unit: string;
   precision: number;
   icon: React.ReactNode;
+  color: string;
+  max: number;
 }
 
-const ICON_MAP: Record<string, React.ReactNode> = {
-  monitorTemperature: <FireOutlined />,
-  monitorPressure: <DashboardOutlined />,
-  monitorPower: <ThunderboltOutlined />,
-  monitorCurrent: <LineChartOutlined />,
-  monitorVoltage: <BulbOutlined />,
-  monitorFlowRate: <ToolOutlined />,
-  monitorFrequency: <SettingOutlined />,
-  monitorStatusCode: <ExperimentOutlined />,
+const ICON_MAP: Record<string, { icon: React.ReactNode; color: string; max: number }> = {
+  monitorTemperature: { icon: <FireOutlined />, color: '#fa541c', max: 1200 },
+  monitorPressure: { icon: <DashboardOutlined />, color: '#177ddc', max: 10 },
+  monitorPower: { icon: <ThunderboltOutlined />, color: '#d89614', max: 150 },
+  monitorCurrent: { icon: <LineChartOutlined />, color: '#49aa19', max: 300 },
+  monitorVoltage: { icon: <BulbOutlined />, color: '#722ed1', max: 500 },
+  monitorFlowRate: { icon: <ToolOutlined />, color: '#13c2c2', max: 100 },
+  monitorFrequency: { icon: <SettingOutlined />, color: '#eb2f96', max: 60 },
+  monitorStatusCode: { icon: <ExperimentOutlined />, color: '#8c8c8c', max: 10 },
 };
 
 const DEFAULT_MAPPINGS: TagMapping = {
@@ -65,30 +66,63 @@ function getNumericTagValue(
   return undefined;
 }
 
-function SparkLine({ data }: { data: number[] }) {
-  if (data.length < 2) return null;
-  const width = 80;
-  const height = 20;
-  const max = Math.max(...data, 1);
-  const min = Math.min(...data, 0);
-  const range = max - min || 1;
-  const points = data
-    .map(
-      (v, i) =>
-        `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * height}`
-    )
-    .join(' ');
+function SquareCard({ def, value }: { def: ParamDef; value: number }) {
+  const frac = def.max > 0 ? Math.min(value / def.max, 1) : 0;
+
   return (
-    <svg width={width} height={height} style={{ display: 'block' }}>
-      <polyline
-        points={points}
-        fill="none"
-        stroke="var(--color-primary)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+    <div
+      style={{
+        background: 'var(--color-bg-elevated)',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--color-border)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '4px 2px',
+        aspectRatio: '1 / 1',
+        width: '100%',
+        minHeight: 0,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: `${frac * 100}%`,
+          background: def.color,
+          opacity: 0.08,
+          transition: 'height 0.4s ease',
+        }}
       />
-    </svg>
+      <div style={{ fontSize: 10, color: def.color, marginBottom: 1, lineHeight: '14px' }}>
+        {def.icon}
+      </div>
+      <span
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: def.color,
+            fontVariantNumeric: 'tabular-nums',
+            lineHeight: '18px',
+          }}
+        >
+          <AnimatedValue value={value} precision={def.precision} />
+        </span>
+        <span
+          style={{
+            fontSize: 8,
+            color: 'var(--color-text-tertiary)',
+            lineHeight: '12px',
+          }}
+        >
+          {def.unit}
+        </span>
+    </div>
   );
 }
 
@@ -96,7 +130,6 @@ function ParamPanel() {
   const { t } = useTranslation();
   const tagValues = usePLCStore((s) => s.tagValues);
   const [tagMappings, setTagMappings] = useState<TagMapping>(DEFAULT_MAPPINGS);
-  const bp = useBreakpoint();
 
   useEffect(() => {
     if (window.electronAPI) {
@@ -114,12 +147,15 @@ function ParamPanel() {
     () =>
       FIELD_META.map((field) => {
         const tagName = tagMappings[field.key] || DEFAULT_MAPPINGS[field.key];
+        const meta = ICON_MAP[field.key] || { icon: <SettingOutlined />, color: '#8c8c8c', max: 100 };
         return {
           tagName,
           labelKey: field.labelKey,
           unit: field.unit,
           precision: field.precision,
-          icon: ICON_MAP[field.key] || <SettingOutlined />,
+          icon: meta.icon,
+          color: meta.color,
+          max: meta.max,
         };
       }),
     [tagMappings]
@@ -129,65 +165,47 @@ function ParamPanel() {
     () =>
       params.map((p) => {
         const raw = getNumericTagValue(tagValues, p.tagName);
-        const fallback = raw ?? 0;
         return {
           ...p,
-          value: raw,
-          displayValue: raw !== undefined ? raw : 0,
+          value: raw !== undefined ? raw : 0,
           hasData: raw !== undefined,
         };
       }),
     [params, tagValues]
   );
 
-  const colCount = bp.xs ? 2 : bp.sm ? 4 : 8;
-
-    return (
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${colCount}, 1fr)`,
-          gap: 4,
-          width: '100%',
-        }}
-      >
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 3,
+        width: '100%',
+      }}
+    >
       {values.map((p) => (
         <div
           key={p.tagName}
-          className="card-hover"
           style={{
-            background: 'var(--color-bg-elevated)',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--color-border)',
-            padding: '3px 6px',
             display: 'flex',
             flexDirection: 'column',
             gap: 1,
           }}
         >
-          <div
+          <span
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              color: 'var(--color-text-secondary)',
-              fontSize: 9,
+              fontSize: 8,
+              color: 'var(--color-text-tertiary)',
+              textAlign: 'center',
+              lineHeight: '12px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
-            {p.icon}
-            <span>{t(p.labelKey)}</span>
-          </div>
-          <AnimatedValue
-            value={p.displayValue}
-            precision={p.precision}
-            suffix={p.unit}
-            style={{
-              fontSize: 12,
-              fontWeight: 700,
-              color: 'var(--color-text-primary)',
-              lineHeight: '16px',
-            }}
-          />
+            {t(p.labelKey)}
+          </span>
+          <SquareCard def={p} value={p.value} />
         </div>
       ))}
     </div>

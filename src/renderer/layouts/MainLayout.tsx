@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Typography, Tag, theme, Dropdown, Space } from 'antd';
+import { Layout, Menu, Tag, theme, Dropdown, Space } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   DashboardOutlined,
@@ -12,15 +12,13 @@ import {
   LogoutOutlined,
   TeamOutlined,
   SettingOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../stores/authStore';
 import { useResponsive } from '../hooks/useResponsive';
 
 const { Header, Sider, Content } = Layout;
-const { Text } = Typography;
-
-const SM_BREAKPOINT = 1280;
-const LG_BREAKPOINT = 1920;
 
 const baseMenuItems: MenuProps['items'] = [
   {
@@ -52,20 +50,7 @@ function MainLayout() {
   const [connected, setConnected] = useState(false);
   const { token: themeToken } = theme.useToken();
   const { currentUser, logout, isAuthenticated } = useAuthStore();
-  const { breakpoint, isMobile } = useResponsive();
-
-  const autoCollapse = useCallback(() => {
-    const width = window.innerWidth;
-    if (width < SM_BREAKPOINT) {
-      setCollapsed(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    autoCollapse();
-    window.addEventListener('resize', autoCollapse);
-    return () => window.removeEventListener('resize', autoCollapse);
-  }, [autoCollapse]);
+  const { isMobile } = useResponsive();
 
   useEffect(() => {
     if (window.electronAPI) {
@@ -106,10 +91,6 @@ function MainLayout() {
     },
   ];
 
-  const siderWidth = breakpoint === 'lg' ? 220 : breakpoint === 'md' ? 200 : 0;
-  const contentPadding = breakpoint === 'lg' ? 24 : breakpoint === 'md' ? 16 : 12;
-  const headerFontSize = breakpoint === 'lg' ? 18 : breakpoint === 'md' ? 16 : 14;
-
   return (
     <Layout style={{ height: '100vh' }}>
       {!isMobile && (
@@ -117,15 +98,33 @@ function MainLayout() {
           collapsible
           collapsed={collapsed}
           onCollapse={setCollapsed}
-          width={siderWidth}
+          width={200}
+          collapsedWidth={60}
+          trigger={
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: 40,
+                color: themeToken.colorTextSecondary,
+                cursor: 'pointer',
+                fontSize: 16,
+              }}
+            >
+              {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            </div>
+          }
           style={{
             background: themeToken.colorBgElevated,
             borderRight: `1px solid ${themeToken.colorBorderSecondary}`,
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <div
             style={{
-              height: 64,
+              height: 40,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -134,22 +133,22 @@ function MainLayout() {
           >
             <ApiOutlined
               style={{
-                fontSize: collapsed ? 20 : 28,
+                fontSize: collapsed ? 18 : 24,
                 color: themeToken.colorPrimary,
               }}
             />
             {!collapsed && (
-              <Text
-                strong
+              <span
                 style={{
                   color: themeToken.colorPrimary,
-                  fontSize: 16,
-                  marginLeft: 10,
+                  fontWeight: 700,
+                  fontSize: 15,
+                  marginLeft: 8,
                   whiteSpace: 'nowrap',
                 }}
               >
                 HMI System
-              </Text>
+              </span>
             )}
           </div>
           <Menu
@@ -160,9 +159,46 @@ function MainLayout() {
             style={{
               background: 'transparent',
               borderRight: 0,
-              marginTop: 8,
+              marginTop: 4,
+              flex: 1,
             }}
           />
+          {collapsed ? (
+            <div
+              style={{
+                height: 40,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderTop: `1px solid ${themeToken.colorBorderSecondary}`,
+                fontSize: 10,
+                color: themeToken.colorTextTertiary,
+                lineHeight: '14px',
+                textAlign: 'center',
+                padding: '0 2px',
+              }}
+            >
+              <ApiOutlined style={{ fontSize: 14, color: themeToken.colorPrimary }} />
+            </div>
+          ) : (
+            <div
+              style={{
+                height: 48,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderTop: `1px solid ${themeToken.colorBorderSecondary}`,
+                fontSize: 10,
+                color: themeToken.colorTextTertiary,
+                lineHeight: '16px',
+                padding: '4px 8px',
+              }}
+            >
+              <span>HMI System</span>
+              <span>工业人机界面监控系统</span>
+            </div>
+          )}
         </Sider>
       )}
       <Layout>
@@ -172,48 +208,51 @@ function MainLayout() {
             borderBottom: `1px solid ${themeToken.colorBorderSecondary}`,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: `0 ${contentPadding}px`,
-            height: 64,
+            justifyContent: 'flex-end',
+            padding: '0 16px',
+            height: 40,
           }}
         >
-          <Text
-            strong
-            style={{ fontSize: headerFontSize, color: themeToken.colorText }}
-          >
-            工业人机界面监控系统
-          </Text>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Tag
               color={connected ? 'green' : 'red'}
-              icon={
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: connected ? '#52c41a' : '#ff4d4f',
-                    marginRight: 4,
-                  }}
-                />
-              }
+              style={{
+                fontSize: 10,
+                lineHeight: '16px',
+                padding: '0 6px',
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
             >
-              {connected ? 'Electron 已连接' : '浏览器模式'}
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: connected ? '#52c41a' : '#ff4d4f',
+                }}
+              />
+              {connected ? 'Electron' : '浏览器'}
             </Tag>
             {isAuthenticated && currentUser && (
               <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-                <Space style={{ cursor: 'pointer', color: themeToken.colorText }}>
-                  <UserOutlined />
-                  {!isMobile && (
-                    <Text style={{ color: themeToken.colorText }}>
+                <Space style={{ cursor: 'pointer', color: themeToken.colorText, gap: 4 }}>
+                  <UserOutlined style={{ fontSize: 12 }} />
+                  {currentUser.username && (
+                    <span style={{ fontSize: 12, color: themeToken.colorText }}>
                       {currentUser.username}
-                    </Text>
+                    </span>
                   )}
-                  <Tag color={
-                    currentUser.role === 'admin' ? 'red' :
-                    currentUser.role === 'engineer' ? 'blue' : 'green'
-                  }>
+                  <Tag
+                    color={
+                      currentUser.role === 'admin' ? 'red' :
+                      currentUser.role === 'engineer' ? 'blue' : 'green'
+                    }
+                    style={{ fontSize: 10, lineHeight: '14px', padding: '0 4px', margin: 0 }}
+                  >
                     {currentUser.role === 'admin' ? '管理员' :
                      currentUser.role === 'engineer' ? '工程师' : '操作员'}
                   </Tag>
@@ -224,11 +263,12 @@ function MainLayout() {
         </Header>
         <Content
           style={{
-            margin: isMobile ? 8 : 16,
-            padding: contentPadding,
+            margin: 8,
+            padding: 8,
             background: themeToken.colorBgContainer,
             borderRadius: themeToken.borderRadius,
             overflow: 'auto',
+            height: '100%',
           }}
         >
           <Outlet />

@@ -46,7 +46,8 @@
     "completionRate": "计划完成率",
     "flowRate": "流量",
     "frequency": "频率",
-    "statusCode": "状态码"
+    "statusCode": "状态码",
+    "realtimeCurve": "实时曲线"
   },
   "recipe": {
     "title": "工艺控制",

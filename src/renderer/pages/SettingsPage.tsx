@@ -54,6 +54,30 @@ const MAPPING_FIELDS: { key: keyof TagMapping; labelKey: string; unit: string }[
   { key: 'monitorStatusCode', labelKey: 'monitor.statusCode', unit: '' },
 ];
 
+const DEFAULT_MAPPINGS: TagMapping = {
+  monitorTemperature: 'furnace.temp_zone2',
+  monitorPressure: 'furnace.pressure',
+  monitorPower: 'furnace.power',
+  monitorCurrent: 'furnace.current',
+  monitorVoltage: 'furnace.voltage',
+  monitorFlowRate: 'furnace.flow_rate',
+  monitorFrequency: 'furnace.frequency',
+  monitorStatusCode: 'furnace.status_code',
+};
+
+const DEMO_TAGS: TagConfig[] = [
+  { name: 'furnace.temp_zone1', address: 'DB100.DBD0', type: 'real', description: '炉温 Zone1' },
+  { name: 'furnace.temp_zone2', address: 'DB100.DBD4', type: 'real', description: '炉温 Zone2' },
+  { name: 'furnace.temp_zone3', address: 'DB100.DBD8', type: 'real', description: '炉温 Zone3' },
+  { name: 'furnace.pressure', address: 'DB100.DBD12', type: 'real', description: '炉压' },
+  { name: 'furnace.power', address: 'DB100.DBD16', type: 'real', description: '功率' },
+  { name: 'furnace.current', address: 'DB100.DBD20', type: 'real', description: '电流' },
+  { name: 'furnace.voltage', address: 'DB100.DBD24', type: 'real', description: '电压' },
+  { name: 'furnace.flow_rate', address: 'DB100.DBD28', type: 'real', description: '流量' },
+  { name: 'furnace.frequency', address: 'DB100.DBD32', type: 'real', description: '频率' },
+  { name: 'furnace.status_code', address: 'DB100.DBW36', type: 'int', description: '状态码' },
+];
+
 function SettingsPage() {
   const { t, i18n } = useTranslation();
   const { message, modal } = App.useApp();
@@ -72,8 +96,8 @@ function SettingsPage() {
   const [sysForm] = Form.useForm();
   const [mappingForm] = Form.useForm();
 
-  const [availableTags, setAvailableTags] = useState<TagConfig[]>([]);
-  const [currentMappings, setCurrentMappings] = useState<TagMapping | null>(null);
+  const [availableTags, setAvailableTags] = useState<TagConfig[]>(DEMO_TAGS);
+  const [currentMappings, setCurrentMappings] = useState<TagMapping>(DEFAULT_MAPPINGS);
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -84,6 +108,12 @@ function SettingsPage() {
         .then((info) => setAppInfo(info))
         .finally(() => setAppInfoLoading(false));
     } else {
+      setAppInfo({
+        version: '2.0.0-dev',
+        platform: navigator.platform || 'browser',
+        nodeVersion: '-',
+        electronVersion: '-',
+      });
       setAppInfoLoading(false);
     }
   }, []);
@@ -94,13 +124,18 @@ function SettingsPage() {
         .get()
         .then((settings) => {
           sysForm.setFieldsValue({
-            pollInterval: settings.pollInterval,
-            historySaveInterval: settings.historySaveInterval,
-            alarmCheckEnabled: settings.alarmCheckEnabled,
+            pollInterval: settings.pollInterval ?? 500,
+            historySaveInterval: settings.historySaveInterval ?? 10,
+            alarmCheckEnabled: settings.alarmCheckEnabled ?? true,
           });
         })
         .finally(() => setSysParamsLoading(false));
     } else {
+      sysForm.setFieldsValue({
+        pollInterval: 500,
+        historySaveInterval: 10,
+        alarmCheckEnabled: true,
+      });
       setSysParamsLoading(false);
     }
   }, [sysForm]);
@@ -117,19 +152,14 @@ function SettingsPage() {
           window.electronAPI.settings.get(),
           window.electronAPI.plc.getTags().catch(() => [] as TagConfig[]),
         ]);
-        setAvailableTags(tags);
-        const mappings = settings.tagMappings || {
-          monitorTemperature: 'furnace.temp_zone2',
-          monitorPressure: 'furnace.pressure',
-          monitorPower: 'furnace.power',
-          monitorCurrent: 'furnace.current',
-          monitorVoltage: 'furnace.voltage',
-          monitorFlowRate: 'furnace.flow_rate',
-          monitorFrequency: 'furnace.frequency',
-          monitorStatusCode: 'furnace.status_code',
-        };
+        setAvailableTags(tags.length > 0 ? tags : DEMO_TAGS);
+        const mappings = settings.tagMappings || DEFAULT_MAPPINGS;
         setCurrentMappings(mappings);
         mappingForm.setFieldsValue(mappings);
+      } else {
+        setAvailableTags(DEMO_TAGS);
+        setCurrentMappings(DEFAULT_MAPPINGS);
+        mappingForm.setFieldsValue(DEFAULT_MAPPINGS);
       }
     } catch (err) {
       console.error('[Settings] load mapping error:', err);
@@ -446,7 +476,7 @@ function SettingsPage() {
             ),
             children: (
               <Row gutter={[24, 24]}>
-                <Col xs={24} md={16} lg={12}>
+                <Col xs={24} md={16} lg={14}>
                   <Card
                     title={
                       <Space>
@@ -474,43 +504,78 @@ function SettingsPage() {
                         <Spin />
                       </div>
                     ) : (
-                      <Form form={mappingForm} layout="vertical">
-                        {MAPPING_FIELDS.map((field) => (
-                          <Form.Item
-                            key={field.key}
-                            name={field.key}
-                            label={
-                              <Space size={4}>
-                                <span>{t(field.labelKey)}</span>
-                                {field.unit && (
-                                  <Text type="secondary" style={{ fontSize: 12 }}>
-                                    ({field.unit})
-                                  </Text>
-                                )}
-                              </Space>
-                            }
-                            rules={[{ required: true, message: '请选择对应点位' }]}
-                          >
-                            <Select
-                              showSearch
-                              placeholder="搜索或选择 PLC 标签"
-                              options={tagOptions}
-                              allowClear
-                              filterOption={(input, option) =>
-                                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                      <>
+                        <div style={{ marginBottom: 16, color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                          共 {MAPPING_FIELDS.length} 个映射点 | 可用标签 {availableTags.length} 个
+                        </div>
+                        <Form form={mappingForm} layout="vertical">
+                          {MAPPING_FIELDS.map((field) => (
+                            <Form.Item
+                              key={field.key}
+                              name={field.key}
+                              label={
+                                <Space size={4}>
+                                  <span>{t(field.labelKey)}</span>
+                                  {field.unit && (
+                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                      ({field.unit})
+                                    </Text>
+                                  )}
+                                </Space>
                               }
-                            />
-                          </Form.Item>
+                              rules={[{ required: true, message: '请选择对应点位' }]}
+                            >
+                              <Select
+                                showSearch
+                                placeholder="搜索或选择 PLC 标签"
+                                options={tagOptions}
+                                allowClear
+                                filterOption={(input, option) =>
+                                  (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                                }
+                              />
+                            </Form.Item>
+                          ))}
+                          <Space>
+                            <Button type="primary" onClick={handleSaveMappings}>
+                              保存映射
+                            </Button>
+                            <Button onClick={() => mappingForm.resetFields()}>
+                              重置
+                            </Button>
+                          </Space>
+                        </Form>
+                      </>
+                    )}
+                  </Card>
+                </Col>
+
+                <Col xs={24} md={8} lg={10}>
+                  <Card title="可用 PLC 标签" size="small">
+                    {availableTags.length === 0 ? (
+                      <Text type="secondary">暂无可用标签</Text>
+                    ) : (
+                      <Descriptions column={1} size="small" bordered>
+                        {availableTags.map((tag) => (
+                          <Descriptions.Item
+                            key={tag.name}
+                            label={
+                              <Text code style={{ fontSize: 11 }}>
+                                {tag.name}
+                              </Text>
+                            }
+                          >
+                            <Space size={4}>
+                              <Tag color="blue" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>
+                                {tag.address}
+                              </Tag>
+                              <Text type="secondary" style={{ fontSize: 10 }}>
+                                {tag.type}
+                              </Text>
+                            </Space>
+                          </Descriptions.Item>
                         ))}
-                        <Space>
-                          <Button type="primary" onClick={handleSaveMappings}>
-                            保存映射
-                          </Button>
-                          <Button onClick={() => mappingForm.resetFields()}>
-                            重置
-                          </Button>
-                        </Space>
-                      </Form>
+                      </Descriptions>
                     )}
                   </Card>
                 </Col>
@@ -525,34 +590,50 @@ function SettingsPage() {
               </span>
             ),
             children: (
-              <Card title={t('settings.about')} size="small">
-                {appInfoLoading ? (
-                  <div style={{ textAlign: 'center', padding: 24 }}>
-                    <Spin />
-                  </div>
-                ) : (
-                  <Descriptions column={1} bordered size="small">
-                    <Descriptions.Item label={t('settings.appName')}>
-                      Industrial HMI
-                    </Descriptions.Item>
-                    <Descriptions.Item label={t('settings.version')}>
-                      {appInfo?.version || '-'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Electron">
-                      {appInfo?.electronVersion || '-'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Node.js">
-                      {appInfo?.nodeVersion || '-'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Chrome">
-                      {appInfo?.version || '-'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label={t('settings.platform')}>
-                      {appInfo?.platform || '-'}
-                    </Descriptions.Item>
-                  </Descriptions>
-                )}
-              </Card>
+              <Row gutter={[24, 24]}>
+                <Col xs={24} md={12}>
+                  <Card title={t('settings.about')} size="small">
+                    {appInfoLoading ? (
+                      <div style={{ textAlign: 'center', padding: 24 }}>
+                        <Spin />
+                      </div>
+                    ) : (
+                      <Descriptions column={1} bordered size="small">
+                        <Descriptions.Item label={t('settings.appName')}>
+                          Industrial HMI
+                        </Descriptions.Item>
+                        <Descriptions.Item label={t('settings.version')}>
+                          {appInfo?.version || '-'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Electron">
+                          {window.electronAPI ? (appInfo?.electronVersion || '-') : '浏览器模式'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Node.js">
+                          {window.electronAPI ? (appInfo?.nodeVersion || '-') : '浏览器模式'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label={t('settings.platform')}>
+                          {appInfo?.platform || '-'}
+                        </Descriptions.Item>
+                      </Descriptions>
+                    )}
+                  </Card>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Card title="系统信息" size="small">
+                    <Descriptions column={1} bordered size="small">
+                      <Descriptions.Item label="环境">
+                        {window.electronAPI ? 'Electron' : '浏览器'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="连接模式">
+                        {window.electronAPI ? '本机 IPC' : '开发服务器'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="用户代理">
+                        {navigator.userAgent.substring(0, 60)}...
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </Card>
+                </Col>
+              </Row>
             ),
           },
         ]}

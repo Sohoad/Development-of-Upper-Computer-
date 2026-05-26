@@ -24,6 +24,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (username: string, password: string) => {
     set({ isLoading: true });
     try {
+      if (!window.electronAPI) {
+        await new Promise((r) => setTimeout(r, 600));
+        if (username === 'admin' && password === 'admin123') {
+          const demoUser: User = { id: '0', username: 'admin', role: 'admin' };
+          set({ currentUser: demoUser, isAuthenticated: true, isLoading: false });
+          return { success: true };
+        }
+        set({ isLoading: false });
+        return { success: false, error: '用户名或密码错误' };
+      }
       const result = await window.electronAPI.auth.login(username, password);
       if ('error' in result) {
         set({ isLoading: false });

@@ -46,7 +46,8 @@
     "completionRate": "Completion Rate",
     "flowRate": "Flow Rate",
     "frequency": "Frequency",
-    "statusCode": "Status Code"
+    "statusCode": "Status Code",
+    "realtimeCurve": "Real-time Curve"
   },
   "recipe": {
     "title": "Recipe Control",

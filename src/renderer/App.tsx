@@ -78,7 +78,8 @@ function AppRoutes() {
 }
 
 function AppContent() {
-  const { antdAlgorithm } = useThemeContext();
+  const { antdAlgorithm, themeMode } = useThemeContext();
+  const isDark = themeMode === 'dark';
   return (
     <ConfigProvider
       locale={zhCN}
@@ -86,9 +87,10 @@ function AppContent() {
         algorithm: antdAlgorithm,
         token: {
           colorPrimary: '#177ddc',
-          colorBgBase: '#141414',
-          colorBgContainer: '#1f1f1f',
-          colorBgElevated: '#262626',
+          colorBgBase: isDark ? '#141414' : '#f5f5f5',
+          colorBgContainer: isDark ? '#1f1f1f' : '#ffffff',
+          colorBgElevated: isDark ? '#262626' : '#ffffff',
+          colorBorderSecondary: isDark ? '#303030' : '#f0f0f0',
           borderRadius: 4,
         },
       }}
