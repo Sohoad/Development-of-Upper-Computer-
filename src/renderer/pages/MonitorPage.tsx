@@ -52,7 +52,7 @@ function MonitorPage() {
           </div>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', gap: 4, minHeight: 0 }}>
+<div style={{ flex: 1, display: 'flex', gap: 4, minHeight: 0 }}>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
             <FurnaceVisualization />
           </div>

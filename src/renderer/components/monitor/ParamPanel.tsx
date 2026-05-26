@@ -174,7 +174,7 @@ function ParamPanel() {
     [params, tagValues]
   );
 
-  return (
+return (
     <div
       style={{
         display: 'grid',

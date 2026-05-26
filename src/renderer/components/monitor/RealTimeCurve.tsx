@@ -169,7 +169,7 @@ function RealTimeCurve() {
         background: 'var(--color-bg-elevated)',
         borderRadius: 'var(--radius-sm)',
         border: '1px solid var(--color-border)',
-        padding: '4px 8px',
+padding: '4px 8px',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -192,7 +192,7 @@ function RealTimeCurve() {
         >
           {t('monitor.realtimeCurve')}
         </span>
-        <div style={{ display: 'flex', gap: 6 }}>
+<div style={{ display: 'flex', gap: 6 }}>
           {SERIES.map((s) => (
             <div
               key={s.tagName}
@@ -212,7 +212,7 @@ function RealTimeCurve() {
           ))}
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 45 }}>{renderSvg()}</div>
+<div style={{ flex: 1, minHeight: 45 }}>{renderSvg()}</div>
     </div>
   );
 }
