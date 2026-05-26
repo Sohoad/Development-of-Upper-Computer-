@@ -37,11 +37,11 @@ const SERIES: SeriesDef[] = [
 
 const MAX_POINTS = 60;
 const SVG_W = 600;
-const SVG_H = 90;
-const PAD_L = 45;
-const PAD_R = 15;
-const PAD_T = 10;
-const PAD_B = 18;
+const SVG_H = 55;
+const PAD_L = 38;
+const PAD_R = 10;
+const PAD_T = 8;
+const PAD_B = 12;
 const PLOT_W = SVG_W - PAD_L - PAD_R;
 const PLOT_H = SVG_H - PAD_T - PAD_B;
 
@@ -169,11 +169,11 @@ function RealTimeCurve() {
         background: 'var(--color-bg-elevated)',
         borderRadius: 'var(--radius-sm)',
         border: '1px solid var(--color-border)',
-        padding: '6px 10px',
+        padding: '4px 8px',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: 4,
+        gap: 2,
       }}
     >
       <div
@@ -187,24 +187,24 @@ function RealTimeCurve() {
           style={{
             fontWeight: 600,
             color: 'var(--color-text-primary)',
-            fontSize: 10,
+            fontSize: 9,
           }}
         >
           {t('monitor.realtimeCurve')}
         </span>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
           {SERIES.map((s) => (
             <div
               key={s.tagName}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 3,
-                fontSize: 9,
+                gap: 2,
+                fontSize: 8,
                 color: 'var(--color-text-secondary)',
               }}
             >
-              <span style={{ color: s.color, display: 'flex', alignItems: 'center', fontSize: 10 }}>
+              <span style={{ color: s.color, display: 'flex', alignItems: 'center', fontSize: 8 }}>
                 {s.icon}
               </span>
               <span>{s.label}</span>
@@ -212,7 +212,7 @@ function RealTimeCurve() {
           ))}
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 70 }}>{renderSvg()}</div>
+      <div style={{ flex: 1, minHeight: 45 }}>{renderSvg()}</div>
     </div>
   );
 }

@@ -67,7 +67,7 @@ function AlarmBar() {
           background: 'var(--color-bg-elevated)',
           borderRadius: 'var(--radius-sm)',
           border: '1px solid var(--color-border)',
-          height: 100,
+          height: 75,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -78,13 +78,13 @@ function AlarmBar() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: 'var(--space-md) var(--space-lg)',
+            padding: '4px 8px',
             borderBottom: '1px solid var(--color-border-secondary)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-            <BellOutlined style={{ color: activeAlarms.length > 0 ? '#d32029' : undefined }} />
-            <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <BellOutlined style={{ fontSize: 11, color: activeAlarms.length > 0 ? '#d32029' : undefined }} />
+            <span style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: 10 }}>
               {t('monitor.alarms')}
             </span>
           </div>
@@ -103,7 +103,7 @@ function AlarmBar() {
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: 'var(--space-xs)',
+            padding: '2px 4px',
           }}
         >
           {!isConnected ? (
@@ -146,39 +146,41 @@ function AlarmBar() {
                   onClick={() => setSelectedAlarm(alarm)}
                   className="card-hover"
                   style={{
-                    padding: 'var(--space-sm) var(--space-md)',
+                    padding: '3px 6px',
                     borderRadius: 'var(--radius-sm)',
                     cursor: 'pointer',
                     background: !alarm.acknowledged ? cfg.bg : undefined,
                     opacity: alarm.acknowledged ? 0.55 : 1,
-                    marginBottom: 'var(--space-xs)',
+                    marginBottom: 2,
                     display: 'flex',
                     alignItems: 'flex-start',
-                    gap: 'var(--space-sm)',
+                    gap: 4,
                   }}
                 >
-                  <span style={{ color: cfg.color, marginTop: 2 }}>{cfg.icon}</span>
+                  <span style={{ color: cfg.color, marginTop: 1, fontSize: 10 }}>{cfg.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
-                        fontSize: 'var(--font-size-xs)',
+                        fontSize: 8,
                         color: 'var(--color-text-tertiary)',
+                        lineHeight: '12px',
                       }}
                     >
                       {formatTime(alarm.time)}
                     </div>
                     <div
                       style={{
-                        fontSize: 'var(--font-size-sm)',
+                        fontSize: 9,
                         color: 'var(--color-text-primary)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
+                        lineHeight: '14px',
                       }}
                     >
                       {alarm.description}
                     </div>
-                    <div style={{ marginTop: 2 }}>
+                    <div style={{ marginTop: 1 }}>
                       <Tag
                         color={
                           alarm.level === 'emergency'
@@ -187,7 +189,7 @@ function AlarmBar() {
                               ? 'orange'
                               : 'gold'
                         }
-                        style={{ fontSize: 10, lineHeight: '16px' }}
+                        style={{ fontSize: 8, lineHeight: '14px', padding: '0 3px' }}
                       >
                         {t(`alarm.${alarm.level}`)}
                       </Tag>

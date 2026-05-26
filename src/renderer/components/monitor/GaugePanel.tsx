@@ -19,10 +19,10 @@ const GAUGES: GaugeDef[] = [
   { tagName: 'furnace.current', labelKey: 'monitor.current', unit: 'A', max: 300, color: '#49aa19', precision: 0 },
 ];
 
-const CX = 40;
-const CY = 40;
-const R = 32;
-const SW = 4;
+const CX = 28;
+const CY = 28;
+const R = 22;
+const SW = 3;
 
 function polar(cx: number, cy: number, r: number, deg: number) {
   const rad = ((deg - 90) * Math.PI) / 180;
@@ -60,23 +60,23 @@ function GaugeRing({ def }: { def: GaugeDef }) {
         background: 'var(--color-bg-elevated)',
         borderRadius: 'var(--radius-sm)',
         border: '1px solid var(--color-border)',
-        padding: 4,
+        padding: 2,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <svg width="80" height="80" viewBox="0 0 80 80">
+      <svg width="56" height="56" viewBox="0 0 56 56">
         <path d={bgArc} fill="none" stroke="var(--color-border-secondary)" strokeWidth={SW} strokeLinecap="round" />
         <path d={valArc} fill="none" stroke={def.color} strokeWidth={SW} strokeLinecap="round" style={{ transition: 'd 0.4s ease' }} />
         <line x1={CX} y1={CY} x2={needleEnd.x} y2={needleEnd.y} stroke={def.color} strokeWidth="1.5" strokeLinecap="round" style={{ transition: 'all 0.4s ease' }} />
-        <circle cx={CX} cy={CY} r="2.5" fill={def.color} />
+        <circle cx={CX} cy={CY} r="2" fill={def.color} />
       </svg>
-      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums', lineHeight: '18px' }}>
+      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums', lineHeight: '14px' }}>
         <AnimatedValue value={val} precision={def.precision} />
       </span>
-      <span style={{ fontSize: 9, color: 'var(--color-text-tertiary)', lineHeight: '14px' }}>{def.unit}</span>
+      <span style={{ fontSize: 8, color: 'var(--color-text-tertiary)', lineHeight: '12px' }}>{def.unit}</span>
     </div>
   );
 }
@@ -84,10 +84,10 @@ function GaugeRing({ def }: { def: GaugeDef }) {
 function GaugePanel() {
   const { t } = useTranslation();
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, height: '100%' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, height: '100%' }}>
       {GAUGES.map((g) => (
         <div key={g.tagName} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{ fontSize: 9, color: 'var(--color-text-tertiary)', textAlign: 'center', lineHeight: '14px' }}>
+          <span style={{ fontSize: 8, color: 'var(--color-text-tertiary)', textAlign: 'center', lineHeight: '12px' }}>
             {t(g.labelKey)}
           </span>
           <GaugeRing def={g} />

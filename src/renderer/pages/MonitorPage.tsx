@@ -33,14 +33,14 @@ function MonitorPage() {
 
   return (
     <PageTransition direction="fade">
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 6, overflow: 'hidden' }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 4, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>
             {t('monitor.title')}
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <StatusIndicator status={statusIndicatorStatus} size={8} />
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 11 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <StatusIndicator status={statusIndicatorStatus} size={6} />
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 10 }}>
               {connectionStatus.connected
                 ? t('header.connected')
                 : connectionStatus.simulation
@@ -48,7 +48,7 @@ function MonitorPage() {
                   : t('header.disconnected')}
             </span>
             {connectionStatus.connected && (
-              <Tag color="green" style={{ fontSize: 9, lineHeight: '16px', padding: '0 4px', margin: 0 }}>
+              <Tag color="green" style={{ fontSize: 8, lineHeight: '14px', padding: '0 3px', margin: 0 }}>
                 {connectionStatus.latency}ms
               </Tag>
             )}
@@ -59,20 +59,20 @@ function MonitorPage() {
           <ParamPanel />
         </div>
 
-        <div style={{ flex: 1, display: 'flex', gap: 6, minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', gap: 4, minHeight: 0 }}>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
             <FurnaceVisualization />
           </div>
-          <div style={{ width: 240, flexShrink: 0, overflow: 'hidden' }}>
+          <div style={{ width: 180, flexShrink: 0, overflow: 'hidden' }}>
             <GaugePanel />
           </div>
         </div>
 
-        <div style={{ flexShrink: 0, display: 'flex', gap: 6 }}>
+        <div style={{ flexShrink: 0, display: 'flex', gap: 4 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <RealTimeCurve />
           </div>
-          <div style={{ width: 240, flexShrink: 0 }}>
+          <div style={{ width: 180, flexShrink: 0 }}>
             <AlarmBar />
           </div>
         </div>

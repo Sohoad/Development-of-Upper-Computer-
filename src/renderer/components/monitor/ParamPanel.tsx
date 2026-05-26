@@ -140,14 +140,14 @@ function ParamPanel() {
     [params, tagValues]
   );
 
-  const colCount = bp.xs ? 1 : bp.sm ? 2 : bp.md ? 3 : 4;
+  const colCount = bp.xs ? 2 : bp.sm ? 4 : 8;
 
     return (
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${colCount}, 1fr)`,
-          gap: 6,
+          gap: 4,
           width: '100%',
         }}
       >
@@ -159,19 +159,19 @@ function ParamPanel() {
             background: 'var(--color-bg-elevated)',
             borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
-            padding: '6px 10px',
+            padding: '3px 6px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 2,
+            gap: 1,
           }}
         >
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 4,
+              gap: 2,
               color: 'var(--color-text-secondary)',
-              fontSize: 10,
+              fontSize: 9,
             }}
           >
             {p.icon}
@@ -182,10 +182,10 @@ function ParamPanel() {
             precision={p.precision}
             suffix={p.unit}
             style={{
-              fontSize: 16,
+              fontSize: 12,
               fontWeight: 700,
               color: 'var(--color-text-primary)',
-              lineHeight: '22px',
+              lineHeight: '16px',
             }}
           />
         </div>

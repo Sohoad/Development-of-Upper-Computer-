@@ -21,9 +21,9 @@ interface TemperatureZone {
 }
 
 const ZONES: TemperatureZone[] = [
-  { label: 'Top', tagName: 'furnace.temp_zone1', fallback: 780, y: 15, height: 100 },
-  { label: 'Middle', tagName: 'furnace.temp_zone2', fallback: 950, y: 115, height: 100 },
-  { label: 'Bottom', tagName: 'furnace.temp_zone3', fallback: 620, y: 215, height: 100 },
+  { label: 'Top', tagName: 'furnace.temp_zone1', fallback: 780, y: 12, height: 85 },
+  { label: 'Middle', tagName: 'furnace.temp_zone2', fallback: 950, y: 98, height: 85 },
+  { label: 'Bottom', tagName: 'furnace.temp_zone3', fallback: 620, y: 183, height: 85 },
 ];
 
 function tempToColor(temp: number): string {
@@ -84,10 +84,10 @@ function FurnaceVisualization() {
       }}
     >
       <svg
-        viewBox="0 0 420 380"
+        viewBox="0 0 360 320"
         style={{
           width: '100%',
-          maxWidth: 420,
+          maxWidth: 340,
           height: 'auto',
           filter: hasAlarms ? 'drop-shadow(0 0 8px rgba(211,32,41,0.5))' : undefined,
         }}
@@ -125,16 +125,16 @@ function FurnaceVisualization() {
           </linearGradient>
         </defs>
 
-        <rect x="0" y="0" width="420" height="380" rx="12" fill="var(--color-bg-elevated)" stroke="var(--color-border)" strokeWidth="1" />
+        <rect x="0" y="0" width="360" height="320" rx="10" fill="var(--color-bg-elevated)" stroke="var(--color-border)" strokeWidth="1" />
 
         {ZONES.map((z, i) => (
           <rect
             key={`zone-${i}`}
-            x="60"
+            x="50"
             y={z.y}
-            width="200"
+            width="172"
             height={z.height}
-            rx="6"
+            rx="4"
             fill={`url(#zoneGrad-${i})`}
             stroke="rgba(255,255,255,0.15)"
             strokeWidth="1"
@@ -143,22 +143,22 @@ function FurnaceVisualization() {
         ))}
 
         <rect
-          x="100"
-          y="100"
-          width="120"
-          height="200"
-          rx="10"
+          x="86"
+          y="86"
+          width="104"
+          height="170"
+          rx="8"
           fill="url(#crucibleGrad)"
           stroke="rgba(255,255,255,0.2)"
           strokeWidth="2"
         />
 
         <rect
-          x="100"
-          y={100 + (200 * (100 - liquidLevel)) / 100}
-          width="120"
-          height={(200 * liquidLevel) / 100}
-          rx="8"
+          x="86"
+          y={86 + (170 * (100 - liquidLevel)) / 100}
+          width="104"
+          height={(170 * liquidLevel) / 100}
+          rx="6"
           fill="url(#liquidGrad)"
           style={{ transition: 'y 0.5s var(--ease-out), height 0.5s var(--ease-out)' }}
         />
@@ -166,13 +166,13 @@ function FurnaceVisualization() {
         {Array.from({ length: 6 }).map((_, i) => (
           <g key={`coil-left-${i}`}>
             <circle
-              cx="55"
-              cy={50 + i * 50}
-              r="10"
+              cx="46"
+              cy={42 + i * 42}
+              r="8"
               fill="none"
               stroke={i % 2 === 0 ? 'var(--color-warning)' : '#fa541c'}
-              strokeWidth="2.5"
-              strokeDasharray="4 2"
+              strokeWidth="2"
+              strokeDasharray="3 2"
               style={{
                 animation: `status-pulse-warning ${1.5 + i * 0.3}s infinite`,
               }}
@@ -183,13 +183,13 @@ function FurnaceVisualization() {
         {Array.from({ length: 6 }).map((_, i) => (
           <g key={`coil-right-${i}`}>
             <circle
-              cx="265"
-              cy={50 + i * 50}
-              r="10"
+              cx="226"
+              cy={42 + i * 42}
+              r="8"
               fill="none"
               stroke={i % 2 === 0 ? 'var(--color-warning)' : '#fa541c'}
-              strokeWidth="2.5"
-              strokeDasharray="4 2"
+              strokeWidth="2"
+              strokeDasharray="3 2"
               style={{
                 animation: `status-pulse-warning ${1.5 + i * 0.3}s infinite`,
               }}
@@ -200,19 +200,19 @@ function FurnaceVisualization() {
         {zoneTemps.map((z, i) => (
           <g key={`label-${i}`}>
             <text
-              x="270"
-              y={z.y + z.height / 2 + 4}
+              x="232"
+              y={z.y + z.height / 2 + 3}
               fill="var(--color-text-primary)"
-              fontSize="13"
+              fontSize="11"
               fontWeight="600"
             >
               {z.label}
             </text>
             <text
-              x="270"
-              y={z.y + z.height / 2 + 22}
+              x="232"
+              y={z.y + z.height / 2 + 18}
               fill={tempToColor(z.temp)}
-              fontSize="18"
+              fontSize="15"
               fontWeight="700"
             >
               {Math.round(z.temp)}°C
@@ -221,34 +221,34 @@ function FurnaceVisualization() {
         ))}
 
         <text
-          x="160"
-          y={340}
+          x="138"
+          y={288}
           fill="var(--color-text-secondary)"
-          fontSize="12"
+          fontSize="10"
           textAnchor="middle"
         >
           {t('monitor.furnace')}
         </text>
 
         <text
-          x="160"
-          y="360"
+          x="138"
+          y={305}
           fill="var(--color-text-tertiary)"
-          fontSize="10"
+          fontSize="9"
           textAnchor="middle"
         >
           {`Liquid Level: ${Math.round(liquidLevel)}%`}
         </text>
 
-        <text x="210" y="25" fill="var(--color-text-secondary)" fontSize="11" textAnchor="middle">
+        <text x="180" y="20" fill="var(--color-text-secondary)" fontSize="10" textAnchor="middle">
           Exhaust
         </text>
         <rect
-          x="200"
-          y="30"
-          width="20"
-          height="30"
-          rx="3"
+          x="172"
+          y="25"
+          width="16"
+          height="25"
+          rx="2"
           fill="var(--color-bg-spotlight)"
           stroke="var(--color-border)"
           strokeWidth="1"
