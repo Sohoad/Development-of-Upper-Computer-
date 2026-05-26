@@ -65,9 +65,9 @@ function AlarmBar() {
       <div
         style={{
           background: 'var(--color-bg-elevated)',
-          borderRadius: 'var(--radius-md)',
+          borderRadius: 'var(--radius-sm)',
           border: '1px solid var(--color-border)',
-          height: '100%',
+          height: 100,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',

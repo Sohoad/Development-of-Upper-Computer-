@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import useBreakpoint from 'antd/es/grid/hooks/useBreakpoint';
 import { usePLCStore } from '../../stores/plcStore';
-import { AnimatedValue } from '../common';
+import AnimatedValue from '../common/AnimatedValue';
 import {
   FireOutlined,
   DashboardOutlined,
@@ -147,7 +147,7 @@ function ParamPanel() {
         style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${colCount}, 1fr)`,
-          gap: 'var(--space-md)',
+          gap: 6,
           width: '100%',
         }}
       >
@@ -157,21 +157,21 @@ function ParamPanel() {
           className="card-hover"
           style={{
             background: 'var(--color-bg-elevated)',
-            borderRadius: 'var(--radius-md)',
+            borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
-            padding: 'var(--space-lg)',
+            padding: '6px 10px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 'var(--space-sm)',
+            gap: 2,
           }}
         >
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 'var(--space-sm)',
+              gap: 4,
               color: 'var(--color-text-secondary)',
-              fontSize: 'var(--font-size-sm)',
+              fontSize: 10,
             }}
           >
             {p.icon}
@@ -182,23 +182,11 @@ function ParamPanel() {
             precision={p.precision}
             suffix={p.unit}
             style={{
-              fontSize: 'var(--font-size-xxl)',
+              fontSize: 16,
               fontWeight: 700,
               color: 'var(--color-text-primary)',
+              lineHeight: '22px',
             }}
-          />
-          <SparkLine
-            data={[
-              p.displayValue * 0.9,
-              p.displayValue * 0.92,
-              p.displayValue * 0.95,
-              p.displayValue * 0.93,
-              p.displayValue * 0.97,
-              p.displayValue * 0.98,
-              p.displayValue * 0.96,
-              p.displayValue * 0.99,
-              p.displayValue,
-            ]}
           />
         </div>
       ))}

@@ -37,11 +37,11 @@ const SERIES: SeriesDef[] = [
 
 const MAX_POINTS = 60;
 const SVG_W = 600;
-const SVG_H = 160;
-const PAD_L = 50;
-const PAD_R = 20;
-const PAD_T = 15;
-const PAD_B = 25;
+const SVG_H = 90;
+const PAD_L = 45;
+const PAD_R = 15;
+const PAD_T = 10;
+const PAD_B = 18;
 const PLOT_W = SVG_W - PAD_L - PAD_R;
 const PLOT_H = SVG_H - PAD_T - PAD_B;
 
@@ -167,13 +167,13 @@ function RealTimeCurve() {
     <div
       style={{
         background: 'var(--color-bg-elevated)',
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--radius-sm)',
         border: '1px solid var(--color-border)',
-        padding: 'var(--space-lg)',
+        padding: '6px 10px',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: 'var(--space-sm)',
+        gap: 4,
       }}
     >
       <div
@@ -187,24 +187,24 @@ function RealTimeCurve() {
           style={{
             fontWeight: 600,
             color: 'var(--color-text-primary)',
-            fontSize: 'var(--font-size-sm)',
+            fontSize: 10,
           }}
         >
           {t('monitor.realtimeCurve')}
         </span>
-        <div style={{ display: 'flex', gap: 'var(--space-lg)' }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           {SERIES.map((s) => (
             <div
               key={s.tagName}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 'var(--space-xs)',
-                fontSize: 'var(--font-size-xs)',
+                gap: 3,
+                fontSize: 9,
                 color: 'var(--color-text-secondary)',
               }}
             >
-              <span style={{ color: s.color, display: 'flex', alignItems: 'center' }}>
+              <span style={{ color: s.color, display: 'flex', alignItems: 'center', fontSize: 10 }}>
                 {s.icon}
               </span>
               <span>{s.label}</span>
@@ -212,7 +212,7 @@ function RealTimeCurve() {
           ))}
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 160 }}>{renderSvg()}</div>
+      <div style={{ flex: 1, minHeight: 70 }}>{renderSvg()}</div>
     </div>
   );
 }
