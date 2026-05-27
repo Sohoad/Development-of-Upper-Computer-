@@ -1,130 +1,165 @@
 import { ProtocolAdapter } from './ProtocolAdapter';
 import { S7Client } from './S7Client';
 import { TagManager } from './TagManager';
-import { S7AdapterConfig } from '../../shared/protocol';
-import { TagConfig, TagValue, AdapterType } from '../../shared/types';
+import { TagValue, TagConfig, AdapterStatus } from '../../shared/types';
+import { TagDefinition, S7AdapterConfig } from '../../shared/protocol';
+import {
+  parseAddress,
+  ParsedAddress,
+  S7AreaCode,
+} from '../../shared/addressParser';
+
+interface BatchGroup {
+  areaCode: number;
+  dbNumber: number;
+  start: number;
+  tags: { def: TagConfig; parsed: ParsedAddress }[];
+}
+
+function buildGroups(tags: TagConfig[]): BatchGroup[] {
+  const parsedTags = tags
+    .map((def) => {
+      const parsed = parseAddress(def.address);
+      return parsed ? { def, parsed } : null;
+    })
+    .filter((t): t is NonNullable<typeof t> => t !== null);
+
+  const sorted = [...parsedTags].sort((a, b) => {
+    if (a.parsed.areaCode !== b.parsed.areaCode) return a.parsed.areaCode - b.parsed.areaCode;
+    if (a.parsed.dbNumber !== b.parsed.dbNumber) return a.parsed.dbNumber - b.parsed.dbNumber;
+    return a.parsed.start - b.parsed.start;
+  });
+
+  const groups: BatchGroup[] = [];
+  let current: BatchGroup | null = null;
+
+  for (const item of sorted) {
+    if (
+      !current ||
+      current.areaCode !== item.parsed.areaCode ||
+      current.dbNumber !== item.parsed.dbNumber
+    ) {
+      current = {
+        areaCode: item.parsed.areaCode,
+        dbNumber: item.parsed.dbNumber,
+        start: item.parsed.start,
+        tags: [],
+      };
+      groups.push(current);
+    }
+    current.tags.push(item);
+  }
+
+  for (const group of groups) {
+    group.tags.sort((a, b) => a.parsed.start - b.parsed.start);
+  }
+  return groups;
+}
+
+function readGroup(client: S7Client, group: BatchGroup): Promise<Buffer> {
+  const groupEnd = group.tags.reduce((max, t) => {
+    const end = t.parsed.start + t.parsed.size;
+    return end > max ? end : max;
+  }, 0);
+
+  const readSize = groupEnd - group.start;
+
+  if (group.areaCode === S7AreaCode.DB) {
+    return client.readDB(group.dbNumber, group.start, readSize);
+  }
+
+  return client.readArea(group.areaCode, group.dbNumber, group.start, readSize, 0x02);
+}
 
 export class S7Adapter extends ProtocolAdapter {
   readonly name = 's7';
-  readonly type: AdapterType = 's7';
-
-  private s7Client: S7Client;
+  readonly type = 's7' as const;
+  private client: S7Client;
   private tagManager: TagManager;
+  private _connected = false;
+  private _config: S7AdapterConfig | null = null;
 
-  constructor(tagManager?: TagManager) {
+  constructor(client: S7Client, tagManager: TagManager) {
     super();
-    this.s7Client = new S7Client();
-    this.tagManager = tagManager ?? new TagManager();
-
-    this.s7Client.on('connected', (info: unknown) => {
-      this.emit('connected', info);
-    });
-
-    this.s7Client.on('disconnected', () => {
-      this.emit('disconnected');
-    });
-
-    this.s7Client.on('error', (err: Error) => {
-      this.emit('error', err);
-    });
+    this.client = client;
+    this.tagManager = tagManager;
   }
 
-  getRawClient(): S7Client {
-    return this.s7Client;
+  getClient(): S7Client {
+    return this.client;
   }
 
   getTagManager(): TagManager {
     return this.tagManager;
   }
 
-  isSimulation(): boolean {
-    return this.s7Client.isSimulation();
-  }
-
   async connect(config: S7AdapterConfig): Promise<void> {
-    await this.s7Client.connect(config.ip, config.rack, config.slot);
+    this._config = config;
+    await this.client.connect(config.ip, config.rack, config.slot);
+    this._connected = true;
   }
 
   async disconnect(): Promise<void> {
-    await this.s7Client.disconnect();
+    await this.client.disconnect();
+    this._connected = false;
   }
 
   isConnected(): boolean {
-    return this.s7Client.isConnected();
+    return this._connected;
   }
 
-  async readTags(tags: TagConfig[]): Promise<TagValue[]> {
-    const areaGroups = this.groupTagsByArea(tags);
+  isSimulation(): boolean {
+    return this.client.isSimulation();
+  }
+
+  async readTags(tags: TagDefinition[]): Promise<TagValue[]> {
+    if (tags.length === 0) return [];
+
+    const groups = buildGroups(tags);
     const results: TagValue[] = [];
 
-    for (const [key, groupTags] of areaGroups) {
-      const [area, dbNumber] = key.split(':');
-      const areaCode = S7Client.parseArea(area);
-      const dbNum = parseInt(dbNumber, 10) || 0;
+    for (const group of groups) {
+      try {
+        const buffer = await readGroup(this.client, group);
 
-      const { minStart, maxEnd } = this.getReadRange(groupTags);
+        for (const { def, parsed } of group.tags) {
+          try {
+            const offset = parsed.start - group.start;
+            const rawBuffer = parsed.size <= buffer.length
+              ? buffer.subarray(offset, offset + parsed.size)
+              : Buffer.alloc(parsed.size);
 
-      if (area === 'DB') {
-        try {
-          const rawData = await this.s7Client.readDB(dbNum, minStart, maxEnd - minStart);
-          for (const tag of groupTags) {
-            const adjustedStart = tag.start - minStart;
-            const slice = rawData.subarray(adjustedStart, adjustedStart + tag.size);
-            const value = this.tagManager.parseTagValue(tag, slice);
+            const value = this.tagManager.parseValue(def, rawBuffer, 0);
             results.push({
-              name: tag.name,
+              name: def.name,
               value,
-              rawValue: slice,
+              rawValue: rawBuffer,
+              unit: def.unit,
               timestamp: Date.now(),
               quality: true,
-              tag,
+              tag: def,
             });
-          }
-        } catch {
-          for (const tag of groupTags) {
+          } catch {
             results.push({
-              name: tag.name,
-              value: tag.type === 'bool' ? false : 0,
-              rawValue: Buffer.alloc(tag.size),
+              name: def.name,
+              value: 0,
+              rawValue: Buffer.alloc(parsed.size),
               timestamp: Date.now(),
               quality: false,
-              tag,
+              tag: def,
             });
           }
         }
-      } else {
-        try {
-          const rawData = await this.s7Client.readArea(
-            areaCode,
-            dbNum,
-            minStart,
-            maxEnd - minStart,
-            0x02
-          );
-          for (const tag of groupTags) {
-            const adjustedStart = tag.start - minStart;
-            const slice = rawData.subarray(adjustedStart, adjustedStart + tag.size);
-            const value = this.tagManager.parseTagValue(tag, slice);
-            results.push({
-              name: tag.name,
-              value,
-              rawValue: slice,
-              timestamp: Date.now(),
-              quality: true,
-              tag,
-            });
-          }
-        } catch {
-          for (const tag of groupTags) {
-            results.push({
-              name: tag.name,
-              value: tag.type === 'bool' ? false : 0,
-              rawValue: Buffer.alloc(tag.size),
-              timestamp: Date.now(),
-              quality: false,
-              tag,
-            });
-          }
+      } catch {
+        for (const { def, parsed } of group.tags) {
+          results.push({
+            name: def.name,
+            value: 0,
+            rawValue: Buffer.alloc(parsed.size),
+            timestamp: Date.now(),
+            quality: false,
+            tag: def,
+          });
         }
       }
     }
@@ -132,46 +167,33 @@ export class S7Adapter extends ProtocolAdapter {
     return results;
   }
 
-  async writeTag(tag: TagConfig, value: number | boolean): Promise<void> {
-    const buffer = this.tagManager.encodeValue(tag, value);
-    const area = S7Client.parseArea(tag.area);
-    const wordLen = S7Client.parseWordLen(tag.type);
-    const dbNumber = tag.dbNumber ?? 0;
-
-    if (tag.area === 'DB') {
-      await this.s7Client.writeDB(dbNumber, tag.start, tag.size, buffer);
-    } else {
-      await this.s7Client.writeArea(area, dbNumber, tag.start, tag.size, wordLen, buffer);
+  async writeTag(tag: TagDefinition, value: number | boolean): Promise<void> {
+    const parsed = parseAddress(tag.address);
+    if (!parsed) {
+      throw new Error(`Invalid address: ${tag.address}`);
     }
+
+    await this.client.writeTagByAddress(tag.address, value);
   }
 
-  private groupTagsByArea(tags: TagConfig[]): Map<string, TagConfig[]> {
-    const groups = new Map<string, TagConfig[]>();
-    for (const tag of tags) {
-      const dbNum = tag.dbNumber ?? 0;
-      const key = `${tag.area}:${dbNum}`;
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(tag);
-    }
-    return groups;
+  async readAllTags(): Promise<TagValue[]> {
+    const allTags = this.tagManager.getAllTagDefs();
+    return this.readTags(allTags);
   }
 
-  private getReadRange(tags: TagConfig[]): { minStart: number; maxEnd: number } {
-    let minStart = Infinity;
-    let maxEnd = 0;
-
-    for (const tag of tags) {
-      if (tag.start < minStart) {
-        minStart = tag.start;
-      }
-      const end = tag.start + tag.size;
-      if (end > maxEnd) {
-        maxEnd = end;
-      }
-    }
-
-    return { minStart: minStart === Infinity ? 0 : minStart, maxEnd };
+  getStatus(): AdapterStatus {
+    return {
+      name: this.name,
+      type: this.type,
+      connected: this._connected,
+      simulation: this.client.isSimulation(),
+      stats: {
+        totalRequests: 0,
+        successCount: 0,
+        failCount: 0,
+        avgLatency: 0,
+        lastPollTime: 0,
+      },
+    };
   }
 }

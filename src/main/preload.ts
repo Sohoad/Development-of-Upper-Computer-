@@ -80,6 +80,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAdapterStatus: (name: string): Promise<AdapterStatus | null> =>
       ipcRenderer.invoke('protocol:get-adapter-status', name),
   },
+  tags: {
+    getAll: (): Promise<TagConfig[]> =>
+      ipcRenderer.invoke('tags:get-all'),
+    add: (tag: TagConfig): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('tags:add', tag),
+    remove: (name: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('tags:remove', name),
+    update: (name: string, tag: Partial<TagConfig>): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('tags:update', name, tag),
+    getAvailable: (): Promise<{ name: string; address: string; type: string }[]> =>
+      ipcRenderer.invoke('tags:get-available'),
+  },
   auth: {
     login: (username: string, password: string): Promise<{ id: string; username: string; role: 'operator' | 'engineer' | 'admin'; createdAt: string } | { error: string }> =>
       ipcRenderer.invoke('auth:login', username, password),

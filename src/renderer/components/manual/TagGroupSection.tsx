@@ -1,99 +1,45 @@
-import { Collapse, Typography, Empty } from 'antd';
-import type { TagConfig, TagValue } from '@shared/types';
-import { useTranslation } from 'react-i18next';
-import TagControlItem from './TagControlItem';
-
-const { Text } = Typography;
+import { TagConfig } from '../../../shared/types';
+import { TagControlItem } from './TagControlItem';
 
 interface TagGroupSectionProps {
-  title: string;
+  group: string;
   tags: TagConfig[];
-  tagValues: Map<string, TagValue>;
-  isCollapsible?: boolean;
-  defaultCollapsed?: boolean;
-  disabled: boolean;
+  onEdit?: (tag: TagConfig) => void;
+  onDelete?: (name: string) => void;
+  showActions?: boolean;
 }
 
-function TagGroupSection({
-  title,
-  tags,
-  tagValues,
-  isCollapsible = true,
-  defaultCollapsed = false,
-  disabled,
-}: TagGroupSectionProps) {
-  const { t } = useTranslation();
+const GROUP_LABELS: Record<string, string> = {
+  temperature: '温度监测',
+  pressure: '压力监测',
+  power: '功率监测',
+  electrical: '电气参数',
+  digital_input: '数字输入',
+  digital_output: '数字输出',
+  db_data: 'DB 数据块',
+  custom: '自定义标签',
+};
 
-  if (tags.length === 0) {
-    return null;
-  }
-
-  const content = (
-    <div>
-      {tags.map((tag) => (
-        <TagControlItem
-          key={tag.name}
-          tag={tag}
-          tagValue={tagValues.get(tag.name)}
-          disabled={disabled}
-        />
-      ))}
+export function TagGroupSection({ group, tags, onEdit, onDelete, showActions }: TagGroupSectionProps) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gap: 4,
+        }}
+      >
+        {tags.map((tag) => (
+          <TagControlItem
+            key={tag.name}
+            tag={tag}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            showActions={showActions}
+          />
+        ))}
+      </div>
     </div>
   );
-
-  if (!isCollapsible) {
-    return (
-      <div style={{ marginBottom: 16 }}>
-        <Text
-          strong
-          style={{
-            display: 'block',
-            marginBottom: 8,
-            fontSize: 15,
-            padding: '8px 12px',
-            background: '#fafafa',
-            borderRadius: 4,
-          }}
-        >
-          {title}
-          <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-            ({tags.length})
-          </Text>
-        </Text>
-        <div
-          style={{
-            background: '#fff',
-            borderRadius: 4,
-            padding: '0 12px',
-            border: '1px solid #f0f0f0',
-          }}
-        >
-          {content}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <Collapse
-      style={{ marginBottom: 16 }}
-      defaultActiveKey={defaultCollapsed ? [] : [title]}
-      items={[
-        {
-          key: title,
-          label: (
-            <span>
-              {title}
-              <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                ({tags.length})
-              </Text>
-            </span>
-          ),
-          children: content,
-        },
-      ]}
-    />
-  );
 }
-
-export default TagGroupSection;

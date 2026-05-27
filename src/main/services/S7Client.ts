@@ -1,17 +1,5 @@
 import { EventEmitter } from 'events';
-
-const S7AreaPE = 0x81;
-const S7AreaPA = 0x82;
-const S7AreaMK = 0x83;
-const S7AreaDB = 0x84;
-const S7AreaCT = 0x1c;
-const S7AreaTM = 0x1d;
-
-const S7WLBit = 0x01;
-const S7WLByte = 0x02;
-const S7WLWord = 0x04;
-const S7WLDWord = 0x06;
-const S7WLReal = 0x08;
+import { parseAddress, getAreaCode, getWordLenForType, getSizeForType, S7AreaCode, S7WordLen } from '../../shared/addressParser';
 
 let Snap7Client: any = null;
 let isRealMode = false;
@@ -24,59 +12,79 @@ try {
   isRealMode = false;
 }
 
-function parseArea(area: string): number {
-  switch (area.toUpperCase()) {
-    case 'I':
-    case 'INPUT':
-      return S7AreaPE;
-    case 'Q':
-    case 'OUTPUT':
-      return S7AreaPA;
-    case 'M':
-    case 'MARKER':
-      return S7AreaMK;
-    case 'DB':
-    case 'DATABLOCK':
-      return S7AreaDB;
-    case 'CT':
-    case 'COUNTER':
-      return S7AreaCT;
-    case 'TM':
-    case 'TIMER':
-      return S7AreaTM;
-    default:
-      return S7AreaDB;
-  }
-}
-
-function parseWordLen(type: string): number {
-  switch (type.toLowerCase()) {
-    case 'bool':
-      return S7WLBit;
-    case 'byte':
-      return S7WLByte;
-    case 'word':
-      return S7WLWord;
-    case 'dword':
-      return S7WLDWord;
-    case 'real':
-      return S7WLReal;
-    default:
-      return S7WLByte;
-  }
-}
-
 class SimulatedMemory {
   private memory: Map<string, Buffer> = new Map();
+  private baseTime: number = Date.now();
 
   private getKey(area: number, dbNumber: number, start: number): string {
     return `${area}:${dbNumber}:${start}`;
   }
 
-  private generateData(size: number, area: number, start: number): Buffer {
+  private generateData(size: number, area: number, start: number, dbNumber: number): Buffer {
     const buf = Buffer.alloc(size);
+    const elapsed = (Date.now() - this.baseTime) / 1000;
+
     for (let i = 0; i < size; i++) {
-      buf[i] = ((start + i) * 7 + area * 13 + Math.floor(Date.now() / 1000) % 256) % 256;
+      const addr = start + i;
+      let val: number;
+
+      if (dbNumber === 100 && area === S7AreaCode.DB) {
+        if (addr >= 0 && addr < 12) {
+          const zoneIndex = Math.floor(addr / 4);
+          const baseTemps = [780, 950, 620];
+          const variance = Math.sin(elapsed * 0.1 + zoneIndex) * 15;
+          const raw = (baseTemps[zoneIndex] ?? 600) + variance;
+          buf.writeFloatBE(Math.max(0, raw), i * 4);
+          i += 3;
+          continue;
+        }
+        if (addr === 12) {
+          const pressure = 3.2 + Math.sin(elapsed * 0.05) * 0.3;
+          buf.writeFloatBE(Math.max(0, pressure), 0);
+          i += 3;
+          continue;
+        }
+        if (addr === 16) {
+          const power = 85 + Math.sin(elapsed * 0.08) * 5;
+          buf.writeFloatBE(Math.max(0, power), 0);
+          i += 3;
+          continue;
+        }
+        if (addr === 20) {
+          const current = 128 + Math.sin(elapsed * 0.12) * 8;
+          buf.writeFloatBE(Math.max(0, current), 0);
+          i += 3;
+          continue;
+        }
+        if (addr === 24) {
+          const voltage = 380 + Math.sin(elapsed * 0.03) * 5;
+          buf.writeFloatBE(Math.max(0, voltage), 0);
+          i += 3;
+          continue;
+        }
+      }
+
+      if (area === S7AreaCode.PE) {
+        if (addr >= 0 && addr < 8) {
+          const baseTemps = [780, 950, 620, 800];
+          const idx = Math.floor(addr / 2);
+          const temp = (baseTemps[idx] ?? 600) + Math.sin(elapsed * 0.1 + idx) * 10;
+          const rawVal = Math.round(Math.max(0, temp) * 10);
+          buf[i] = (rawVal >> 8) & 0xff;
+          buf[i + 1] = rawVal & 0xff;
+          i += 1;
+          continue;
+        }
+        val = ((addr * 7 + area * 13) + Math.floor(elapsed) % 256) % 256;
+      } else if (area === S7AreaCode.PA) {
+        val = Math.floor(Math.abs(Math.sin(elapsed * 0.05 + addr)) * 256);
+      } else if (area === S7AreaCode.MK) {
+        val = Math.floor(Math.abs(Math.cos(elapsed * 0.03 + addr)) * 256);
+      } else {
+        val = ((addr * 7 + area * 13) + Math.floor(elapsed) % 256) % 256;
+      }
+
+      buf[i] = val & 0xff;
     }
     return buf;
   }
@@ -84,13 +92,13 @@ class SimulatedMemory {
   get(area: number, dbNumber: number, start: number, size: number): Buffer {
     const key = this.getKey(area, dbNumber, start);
     if (!this.memory.has(key)) {
-      this.memory.set(key, this.generateData(size, area, start));
+      this.memory.set(key, this.generateData(size, area, start, dbNumber));
     }
     const existing = this.memory.get(key)!;
     if (existing.length >= size) {
       return Buffer.from(existing.subarray(0, size));
     }
-    this.memory.set(key, this.generateData(size, area, start));
+    this.memory.set(key, this.generateData(size, area, start, dbNumber));
     return Buffer.from(this.memory.get(key)!.subarray(0, size));
   }
 
@@ -105,6 +113,7 @@ export class S7Client extends EventEmitter {
   private _connected = false;
   private simulationMode = false;
   private simMemory = new SimulatedMemory();
+  private connectionInfo: { ip: string; rack: number; slot: number } | null = null;
 
   constructor() {
     super();
@@ -119,6 +128,8 @@ export class S7Client extends EventEmitter {
   }
 
   async connect(ip: string, rack: number, slot: number): Promise<void> {
+    this.connectionInfo = { ip, rack, slot };
+
     if (this.simulationMode) {
       await this.simulateDelay(30, 80);
       this._connected = true;
@@ -144,6 +155,7 @@ export class S7Client extends EventEmitter {
   async disconnect(): Promise<void> {
     if (this.simulationMode) {
       this._connected = false;
+      this.connectionInfo = null;
       this.emit('disconnected');
       return;
     }
@@ -153,6 +165,7 @@ export class S7Client extends EventEmitter {
         this.client.Disconnect();
       }
       this._connected = false;
+      this.connectionInfo = null;
       this.emit('disconnected');
       resolve();
     });
@@ -164,6 +177,10 @@ export class S7Client extends EventEmitter {
 
   isSimulation(): boolean {
     return this.simulationMode;
+  }
+
+  getConnectionInfo(): { ip: string; rack: number; slot: number } | null {
+    return this.connectionInfo;
   }
 
   async readArea(
@@ -218,7 +235,7 @@ export class S7Client extends EventEmitter {
   async readDB(dbNumber: number, start: number, size: number): Promise<Buffer> {
     if (this.simulationMode) {
       await this.simulateDelay(5, 25);
-      return this.simMemory.get(S7AreaDB, dbNumber, start, size);
+      return this.simMemory.get(S7AreaCode.DB, dbNumber, start, size);
     }
 
     return new Promise<Buffer>((resolve, reject) => {
@@ -235,7 +252,7 @@ export class S7Client extends EventEmitter {
   async writeDB(dbNumber: number, start: number, size: number, buffer: Buffer): Promise<void> {
     if (this.simulationMode) {
       await this.simulateDelay(5, 25);
-      this.simMemory.set(S7AreaDB, dbNumber, start, buffer);
+      this.simMemory.set(S7AreaCode.DB, dbNumber, start, buffer);
       return;
     }
 
@@ -250,17 +267,66 @@ export class S7Client extends EventEmitter {
     });
   }
 
+  async readMulti(
+    requests: { area: number; dbNumber: number; start: number; size: number }[]
+  ): Promise<Buffer[]> {
+    if (this.simulationMode) {
+      await this.simulateDelay(10, 40);
+      return requests.map((req) => this.simMemory.get(req.area, req.dbNumber, req.start, req.size));
+    }
+
+    return Promise.all(
+      requests.map((req) => this.readArea(req.area, req.dbNumber, req.start, req.size, S7WordLen.BYTE))
+    );
+  }
+
+  async readTagByAddress(addr: string): Promise<Buffer> {
+    const parsed = parseAddress(addr);
+    if (!parsed) {
+      throw new Error(`Invalid S7 address: ${addr}`);
+    }
+    return this.readArea(parsed.areaCode, parsed.dbNumber, parsed.start, parsed.size, parsed.wordLen);
+  }
+
+  async writeTagByAddress(addr: string, value: number | boolean): Promise<void> {
+    const parsed = parseAddress(addr);
+    if (!parsed) {
+      throw new Error(`Invalid S7 address: ${addr}`);
+    }
+
+    const buf = Buffer.alloc(parsed.size);
+    if (parsed.type === 'bool') {
+      buf[0] = value ? 1 : 0;
+    } else if (parsed.type === 'byte') {
+      buf[0] = typeof value === 'number' ? value & 0xff : 0;
+    } else if (parsed.type === 'word') {
+      const v = typeof value === 'number' ? value & 0xffff : 0;
+      buf[0] = (v >> 8) & 0xff;
+      buf[1] = v & 0xff;
+    } else if (parsed.type === 'real' || parsed.type === 'dword') {
+      if (typeof value === 'number') {
+        buf.writeFloatBE(value, 0);
+      }
+    }
+
+    if (parsed.area === 'DB') {
+      await this.writeDB(parsed.dbNumber, parsed.start, parsed.size, buf);
+    } else {
+      await this.writeArea(parsed.areaCode, parsed.dbNumber, parsed.start, parsed.size, parsed.wordLen, buf);
+    }
+  }
+
   private calcReadSize(amount: number, wordLen: number): number {
     switch (wordLen) {
-      case S7WLBit:
+      case S7WordLen.BIT:
         return Math.ceil(amount / 8);
-      case S7WLByte:
+      case S7WordLen.BYTE:
         return amount;
-      case S7WLWord:
+      case S7WordLen.WORD:
         return amount * 2;
-      case S7WLDWord:
+      case S7WordLen.DWORD:
         return amount * 4;
-      case S7WLReal:
+      case S7WordLen.REAL:
         return amount * 4;
       default:
         return amount;
@@ -271,7 +337,4 @@ export class S7Client extends EventEmitter {
     const ms = Math.floor(Math.random() * (max - min) + min);
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
-
-  static parseArea = parseArea;
-  static parseWordLen = parseWordLen;
 }

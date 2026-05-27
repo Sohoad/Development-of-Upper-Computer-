@@ -1,5 +1,4 @@
-import { TagConfig, TagValue } from '../../shared/types';
-import { S7Client } from './S7Client';
+import { TagConfig, TagValue, PLCConfig } from '../../shared/types';
 
 const DEFAULT_FURNACE_TAGS: TagConfig[] = [
   {
@@ -297,17 +296,52 @@ const DEFAULT_FURNACE_TAGS: TagConfig[] = [
   },
 ];
 
+export type TagDef = TagConfig;
+
+const defaultConfig: PLCConfig = {
+  ip: '192.168.0.1',
+  rack: 0,
+  slot: 1,
+  pollingInterval: 200,
+  simulationMode: true,
+  reconnectDelay: 3000,
+  maxRetries: 3,
+};
+
 export class TagManager {
   private tags: Map<string, TagConfig> = new Map();
+  private config: PLCConfig = { ...defaultConfig };
 
   constructor() {
     this.loadDefaults();
+  }
+
+  updateConfig(newConfig: Partial<PLCConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+  }
+
+  getConfig(): PLCConfig {
+    return { ...this.config };
   }
 
   private loadDefaults(): void {
     for (const tag of DEFAULT_FURNACE_TAGS) {
       this.tags.set(tag.name, { ...tag });
     }
+  }
+
+  getTagDef(name: string): TagDef | undefined {
+    return this.getTag(name);
+  }
+
+  getAllTagDefs(): TagDef[] {
+    return this.getTags();
+  }
+
+  parseValue(def: TagDef, buffer: Buffer, offset: number): number | boolean {
+    const tag: TagConfig = { ...def, start: def.start ?? 0 };
+    const sliced = offset > 0 ? buffer.subarray(offset) : buffer;
+    return this.parseTagValue(tag, sliced);
   }
 
   addTag(tag: TagConfig): void {

@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import * as crypto from 'crypto';
 import { S7Adapter } from './S7Adapter';
+import { S7Client } from './S7Client';
 import { TagManager } from './TagManager';
 import { DataBus } from './DataBus';
 import { ReconnectionManager, ReconnectionConfig } from './ReconnectionManager';
@@ -19,6 +20,7 @@ import {
 
 export class PLCService extends EventEmitter {
   private s7Adapter: S7Adapter;
+  private client: S7Client;
   private tagManager: TagManager;
   private dataBus: DataBus;
   private reconnectionManager: ReconnectionManager;
@@ -32,9 +34,10 @@ export class PLCService extends EventEmitter {
     super();
 
     this.tagManager = new TagManager();
-    this.s7Adapter = new S7Adapter(this.tagManager);
+    this.client = new S7Client();
+    this.s7Adapter = new S7Adapter(this.client, this.tagManager);
     this.dataBus = new DataBus();
-    this.reconnectionManager = new ReconnectionManager(this.s7Adapter.getRawClient());
+    this.reconnectionManager = new ReconnectionManager(this.client);
 
     this.dataBus.registerAdapter(this.s7Adapter);
 
@@ -149,6 +152,35 @@ export class PLCService extends EventEmitter {
 
   getTags(): TagConfig[] {
     return this.tagManager.getTags();
+  }
+
+  addTag(tag: TagConfig): { success: boolean } {
+    try {
+      this.tagManager.addTag(tag);
+      return { success: true };
+    } catch {
+      return { success: false };
+    }
+  }
+
+  removeTag(name: string): { success: boolean } {
+    return { success: this.tagManager.removeTag(name) };
+  }
+
+  updateTag(name: string, updates: Partial<TagConfig>): { success: boolean } {
+    const existing = this.tagManager.getTag(name);
+    if (!existing) return { success: false };
+    const updated = { ...existing, ...updates };
+    this.tagManager.addTag(updated);
+    return { success: true };
+  }
+
+  getAvailableTags(): { name: string; address: string; type: string }[] {
+    return this.tagManager.getTags().map((t) => ({
+      name: t.name,
+      address: t.address,
+      type: t.type,
+    }));
   }
 
   async writeTag(tagName: string, value: number | boolean): Promise<{ success: boolean }> {

@@ -26,6 +26,10 @@ export interface PLCConfig {
   ip: string;
   rack: number;
   slot: number;
+  pollingInterval?: number;
+  simulationMode?: boolean;
+  reconnectDelay?: number;
+  maxRetries?: number;
 }
 
 export interface ConnectionStatus {
@@ -216,6 +220,23 @@ export const DEFAULT_TAG_MAPPINGS: TagMapping = {
   monitorStatusCode: 'furnace.status_code',
 };
 
+export interface AvailableTag {
+  name: string;
+  address: string;
+  type: string;
+}
+
+export interface TagFormData {
+  name: string;
+  address: string;
+  type: 'bool' | 'byte' | 'word' | 'dword' | 'real';
+  unit: string;
+  group: string;
+  min: number;
+  max: number;
+  description: string;
+}
+
 export interface ElectronAPI {
   getAppInfo: () => Promise<AppInfo>;
   platform: string;
@@ -258,5 +279,12 @@ export interface ElectronAPI {
   protocol: {
     listAdapters: () => Promise<AdapterStatus[]>;
     getAdapterStatus: (name: string) => Promise<AdapterStatus | null>;
+  };
+  tags: {
+    getAll: () => Promise<TagConfig[]>;
+    add: (tag: TagConfig) => Promise<{ success: boolean }>;
+    remove: (name: string) => Promise<{ success: boolean }>;
+    update: (name: string, tag: Partial<TagConfig>) => Promise<{ success: boolean }>;
+    getAvailable: () => Promise<AvailableTag[]>;
   };
 }

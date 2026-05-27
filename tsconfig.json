@@ -16,7 +16,7 @@
       "@shared/*": ["src/shared/*"],
       "@renderer/*": ["src/renderer/*"]
     },
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "5.0"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "release"]

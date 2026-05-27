@@ -255,6 +255,31 @@ function registerIPCHandlers(): void {
     return plcService.getDataBus().getAdapterStatus(name);
   });
 
+  ipcMain.handle('tags:get-all', (): TagConfig[] => {
+    if (!plcService) return [];
+    return plcService.getTags();
+  });
+
+  ipcMain.handle('tags:add', (_event, tag: TagConfig): { success: boolean } => {
+    if (!plcService) return { success: false };
+    return plcService.addTag(tag);
+  });
+
+  ipcMain.handle('tags:remove', (_event, name: string): { success: boolean } => {
+    if (!plcService) return { success: false };
+    return plcService.removeTag(name);
+  });
+
+  ipcMain.handle('tags:update', (_event, name: string, tag: Partial<TagConfig>): { success: boolean } => {
+    if (!plcService) return { success: false };
+    return plcService.updateTag(name, tag);
+  });
+
+  ipcMain.handle('tags:get-available', () => {
+    if (!plcService) return [];
+    return plcService.getAvailableTags();
+  });
+
   ipcMain.handle('auth:login', async (_event, username: string, password: string) => {
     try {
       const user = await authenticate(username, password);
